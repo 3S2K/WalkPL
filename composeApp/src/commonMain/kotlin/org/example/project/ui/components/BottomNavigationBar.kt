@@ -11,6 +11,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.MaterialTheme
 
 
 @Composable
@@ -41,11 +42,29 @@ fun BottomNavigationBar(
         )
     )
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
         items.forEach { item ->
             NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.title) },
-                label = { Text(item.title) },
+                icon = { 
+                    Icon(
+                        item.icon,
+                        contentDescription = item.title,
+                        tint = if (currentRoute == item.route) 
+                            MaterialTheme.colorScheme.primary 
+                        else MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                label = { 
+                    Text(
+                        text = item.title,
+                        color = if (currentRoute == item.route) 
+                            MaterialTheme.colorScheme.primary 
+                        else MaterialTheme.colorScheme.onSurface
+                    )
+                },
                 selected = currentRoute == item.route,
                 onClick = { onNavigateToRoute(item.route) }
             )
