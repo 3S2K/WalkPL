@@ -20,6 +20,7 @@ import walkpl.composeapp.generated.resources.compose_multiplatform
 import androidx.compose.material3.Scaffold
 import org.example.project.ui.components.BottomNavigationBar
 import org.example.project.ui.theme.AppTheme
+import org.example.project.ui.components.TopBar
 
 @Composable
 @Preview
@@ -29,6 +30,7 @@ fun App() {
     AppTheme {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
+            topBar = { TopBar() },
             bottomBar = {
                 BottomNavigationBar(
                     currentRoute = currentRoute,
