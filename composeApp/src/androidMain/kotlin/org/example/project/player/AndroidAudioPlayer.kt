@@ -6,15 +6,25 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import org.example.project.domain.model.Track
+import org.example.project.viewmodel.PlayerViewModel
 
-class AndroidAudioPlayer(private val context: Context) : AudioPlayer {
+class AndroidAudioPlayer(
+    private val context: Context
+) : AudioPlayer {
     private var audioService: BackgroundAudioService? = null
     private var isBound = false
+    private lateinit var playerViewModel: PlayerViewModel
     
+    fun setViewModel(viewModel: PlayerViewModel) {
+        playerViewModel = viewModel
+        bindService()  // ViewModel이 설정된 후 서비스 바인딩
+    }
+
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as BackgroundAudioService.LocalBinder
             audioService = binder.getService()
+            audioService?.initialize(playerViewModel)
             isBound = true
         }
 

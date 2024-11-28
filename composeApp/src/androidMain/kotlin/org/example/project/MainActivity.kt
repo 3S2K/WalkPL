@@ -1,8 +1,12 @@
 package org.example.project
 
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.RequiresApi
 import org.example.project.player.AudioPlayer
 import org.example.project.player.AndroidAudioPlayer
 import org.example.project.player.AndroidMetadataReader
@@ -13,13 +17,20 @@ class MainActivity : ComponentActivity() {
     private lateinit var audioPlayer: AudioPlayer
     private lateinit var playlistManager: PlaylistManager
     private lateinit var playerViewModel: PlayerViewModel
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private val permissions = arrayOf(
         android.Manifest.permission.READ_EXTERNAL_STORAGE,
         android.Manifest.permission.POST_NOTIFICATIONS
     )
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (intent?.action == Intent.ACTION_MAIN) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        }
 
         // 권한 요청
         requestPermissions(permissions, 1)
@@ -31,6 +42,7 @@ class MainActivity : ComponentActivity() {
         playlistManager = PlaylistManager()
         val metadataReader = AndroidMetadataReader(this)
         audioPlayer = AndroidAudioPlayer(this)
+
         playerViewModel = PlayerViewModel(
             audioPlayer = audioPlayer,
             playlistManager = playlistManager,
@@ -38,9 +50,24 @@ class MainActivity : ComponentActivity() {
             testSongUri = testSongUri
         )
 
+        // ViewModel 초기화 후 AudioPlayer에 전달
+        (audioPlayer as AndroidAudioPlayer).setViewModel(playerViewModel)
+
         setContent {
             App(viewModel = playerViewModel)
         }
+    }
+
+    public override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action == Intent.ACTION_MAIN) {
+            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val tasks = activityManager.appTasks
+            if (tasks.isNotEmpty()) {
+                tasks[0].moveToFront()
+            }
+        }
+        setIntent(intent)
     }
 
     override fun onDestroy() {

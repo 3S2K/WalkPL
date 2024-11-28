@@ -41,6 +41,13 @@
             android:name=".player.BackgroundAudioService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
+        <receiver android:name=".player.MediaButtonReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="action_play" />
+                <action android:name="action_pause" />
+                <action android:name="action_next" />
+                <action android:name="action_previous" />
+            </intent-filter>
+        </receiver>
     </application>
-
 </manifest>

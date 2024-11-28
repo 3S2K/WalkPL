@@ -12,6 +12,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.example.project.util.viewModelScope
+import org.example.project.player.NotificationManager
 
 class PlayerViewModel(
     private val audioPlayer: AudioPlayer,
@@ -30,6 +31,8 @@ class PlayerViewModel(
 
     private var positionUpdateJob: Job? = null
 
+    private var notificationManager: NotificationManager? = null
+
     init {
         startPositionUpdates()
     }
@@ -38,7 +41,7 @@ class PlayerViewModel(
         positionUpdateJob = viewModelScope.launch {
             while (isActive) {
                 _currentPosition.value = audioPlayer.getCurrentPosition()
-                delay(16) // 약 60fps로 업데이트 (더 부드러운 움직임)
+                delay(100) // 더 자주 업데이트하도록 수정
             }
         }
     }
@@ -69,7 +72,12 @@ class PlayerViewModel(
         } else {
             audioPlayer.resume()
         }
-        _isPlaying.value = !_isPlaying.value
+        
+        _isPlaying.value = audioPlayer.isPlaying()
+        
+        currentTrack.value?.let { track ->
+            notificationManager?.updateNotification(track, _isPlaying.value)
+        }
     }
 
     fun seekTo(position: Long) {
@@ -97,5 +105,13 @@ class PlayerViewModel(
         playlistManager.skipToPrevious()?.let { previousTrack ->
             playTrack(previousTrack.filePath)
         }
+    }
+
+    fun updatePlaybackState(isPlaying: Boolean) {
+        _isPlaying.value = isPlaying
+    }
+
+    fun setNotificationManager(manager: NotificationManager) {
+        notificationManager = manager
     }
 }
