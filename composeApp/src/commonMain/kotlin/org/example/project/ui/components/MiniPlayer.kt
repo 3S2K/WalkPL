@@ -1,122 +1,122 @@
 package org.example.project.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import org.example.project.viewmodel.PlayerViewModel
+import org.example.project.domain.model.Track
 
 @Composable
 fun MiniPlayer(
-    viewModel: PlayerViewModel,
-    onPlayerClick: () -> Unit
+    track: Track,
+    isPlaying: Boolean,
+    progress: Float,
+    currentPosition: Long,
+    duration: Long,
+    onPlayPauseClick: () -> Unit,
+    onNextClick: () -> Unit,
+    onPlayerClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val currentTrack = viewModel.currentTrack.value
-    val isPlaying = viewModel.isPlaying.value
-    val currentPosition = viewModel.currentPosition.value
-    val duration = viewModel.getDuration()
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
+    Surface(
+        onClick = onPlayerClick,
+        color = MaterialTheme.colorScheme.surface,
+        modifier = modifier.fillMaxWidth()
     ) {
-        // Player Controls
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .clickable(onClick = onPlayerClick)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Album Art
-            Box(
+        Column {
+            // Player Controls
+            Row(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (currentTrack?.albumArt == null) {
+                // Album Art
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (track.albumArt == null) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = "Default album art",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Track Info
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp)
+                ) {
+                    Text(
+                        text = track.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = track.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+
+                // Control Buttons
+                IconButton(onClick = onPlayPauseClick) {
                     Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = "Default album art",
-                        tint = Color.White.copy(alpha = 0.7f)
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                IconButton(onClick = onNextClick) {
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = "Next track",
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
 
-            // Track Info
-            Column(
+            // Progress Bar
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp)
+                    .fillMaxWidth()
+                    .height(2.dp)
             ) {
-                Text(
-                    text = currentTrack?.title ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White,
-                    maxLines = 1
+                // Background track
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
-                Text(
-                    text = currentTrack?.artist ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f),
-                    maxLines = 1
-                )
-            }
-
-            // Control Buttons
-            IconButton(onClick = { viewModel.togglePlayPause() }) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color.White
+                
+                // Progress track
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(if (duration > 0) currentPosition.toFloat() / duration else 0f)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.primary)
                 )
             }
-
-            IconButton(onClick = { viewModel.skipToNext() }) {
-                Icon(
-                    imageVector = Icons.Default.SkipNext,
-                    contentDescription = "Next track button",
-                    tint = Color.White
-                )
-            }
-        }
-
-        // Progress Bar
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(2.dp)
-        ) {
-            // Background track
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White)
-            )
-            
-            // Progress track with fixed spacing
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(if (duration > 0) currentPosition.toFloat() / duration else 0f)
-                    .fillMaxHeight()
-                    .padding(end = 2.dp)  // 고정된 간격 추가
-                    .background(MaterialTheme.colorScheme.primary)
-            )
         }
     }
 }

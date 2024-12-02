@@ -26,8 +26,14 @@ class PlayerViewModel(
     private val _isPlaying = mutableStateOf(false)
     val isPlaying: State<Boolean> = _isPlaying
 
+    private val _progress = mutableStateOf(0f)
+    val progress: State<Float> = _progress
+
     private val _currentPosition = mutableStateOf(0L)
     val currentPosition: State<Long> = _currentPosition
+
+    private val _duration = mutableStateOf(0L)
+    val duration: State<Long> = _duration
 
     private var positionUpdateJob: Job? = null
 
@@ -41,7 +47,13 @@ class PlayerViewModel(
         positionUpdateJob = viewModelScope.launch {
             while (isActive) {
                 _currentPosition.value = audioPlayer.getCurrentPosition()
-                delay(100) // 더 자주 업데이트하도록 수정
+                _duration.value = audioPlayer.getDuration()
+                _progress.value = if (_duration.value > 0) {
+                    _currentPosition.value.toFloat() / _duration.value
+                } else {
+                    0f
+                }
+                delay(100) // 100ms마다 업데이트
             }
         }
     }

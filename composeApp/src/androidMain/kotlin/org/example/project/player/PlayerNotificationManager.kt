@@ -6,25 +6,18 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
+import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media3.common.Player
 import androidx.media3.session.MediaSession
-import androidx.core.app.NotificationCompat
-import android.support.v4.media.session.MediaSessionCompat
+import kotlinx.coroutines.*
 import org.example.project.MainActivity
 import org.example.project.R
 import org.example.project.domain.model.Track
 import org.example.project.viewmodel.PlayerViewModel
-import org.example.project.player.NotificationManager
-
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
-import android.support.v4.media.session.PlaybackStateCompat
-import android.support.v4.media.MediaMetadataCompat
 
 class PlayerNotificationManager(
     private val context: Context,
@@ -76,7 +69,7 @@ class PlayerNotificationManager(
         val stateBuilder = PlaybackStateCompat.Builder()
             .setState(
                 if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-                player.currentPosition,
+                playerViewModel.currentPosition.value,
                 1.0f
             )
             .setActions(
@@ -91,7 +84,7 @@ class PlayerNotificationManager(
         val metadata = MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, track.title)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, track.artist)
-            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, player.duration)
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, playerViewModel.duration.value)
             .build()
         mediaSessionCompat.setMetadata(metadata)
 
@@ -144,8 +137,8 @@ class PlayerNotificationManager(
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .setProgress(
-                player.duration.toInt(),
-                player.currentPosition.toInt(),
+                playerViewModel.duration.value.toInt(),
+                playerViewModel.currentPosition.value.toInt(),
                 false
             )
             .setColorized(true)
@@ -205,8 +198,8 @@ class PlayerNotificationManager(
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setAutoCancel(true)
                 .setProgress(
-                    player.duration.toInt(),
-                    player.currentPosition.toInt(),
+                    playerViewModel.duration.value.toInt(),
+                    playerViewModel.currentPosition.value.toInt(),
                     false
                 )
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
