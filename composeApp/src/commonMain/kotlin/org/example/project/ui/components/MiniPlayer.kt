@@ -19,7 +19,6 @@ import org.example.project.domain.model.Track
 fun MiniPlayer(
     track: Track,
     isPlaying: Boolean,
-    progress: Float,
     currentPosition: Long,
     duration: Long,
     onPlayPauseClick: () -> Unit,
