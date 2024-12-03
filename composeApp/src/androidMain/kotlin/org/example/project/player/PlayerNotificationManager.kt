@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -64,12 +65,35 @@ class PlayerNotificationManager(
         mediaSessionCompat.isActive = true
     }
 
+    private var progressUpdateJob: Job? = null
+
+    private fun startProgressUpdates() {
+        progressUpdateJob?.cancel()
+        progressUpdateJob = CoroutineScope(Dispatchers.Main).launch {
+            while (isActive) {
+                playerViewModel.currentTrack.value?.let { track ->
+                    updateNotificationWithProgress(
+                        track,
+                        playerViewModel.isPlaying.value,
+                        playerViewModel.currentPosition.value
+                    )
+                }
+                delay(200)
+            }
+        }
+    }
+
     override fun updateNotification(track: Track, isPlaying: Boolean) {
-        // MediaSession 상태 먼저 업데이트
+        updateNotificationWithProgress(track, isPlaying, playerViewModel.currentPosition.value)
+        startProgressUpdates()
+    }
+
+    private fun updateNotificationWithProgress(track: Track, isPlaying: Boolean, currentPosition: Long) {
+        // MediaSession 상태 업데이트
         val stateBuilder = PlaybackStateCompat.Builder()
             .setState(
                 if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
-                playerViewModel.currentPosition.value,
+                currentPosition,
                 1.0f
             )
             .setActions(
@@ -123,92 +147,48 @@ class PlayerNotificationManager(
             PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(track.title)
-            .setContentText(track.artist)
-            .setContentIntent(pendingIntent)
-            .setStyle(
+        val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationCompat.Builder(context, channelId)
+        } else {
+            @Suppress("DEPRECATION")
+            NotificationCompat.Builder(context)
+        }.apply {
+            setSmallIcon(R.drawable.ic_notification)
+            setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.ic_music_note))
+            setContentTitle(track.title)
+            setContentText(track.artist)
+            setContentIntent(pendingIntent)
+            setStyle(
                 MediaStyle()
                     .setMediaSession(mediaSessionCompat.sessionToken)
                     .setShowActionsInCompactView(0, 1, 2)
             )
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setAutoCancel(true)
-            .setProgress(
+            setPriority(NotificationCompat.PRIORITY_HIGH)
+            setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            setAutoCancel(true)
+            setProgress(
                 playerViewModel.duration.value.toInt(),
-                playerViewModel.currentPosition.value.toInt(),
+                currentPosition.toInt(),
                 false
             )
-            .setColorized(true)
-            .setColor(0xFF212121.toInt())
-            .addAction(R.drawable.skip_previous_24px, "Previous", prevIntent)
-            .addAction(
-                if (isPlaying) R.drawable.pause_24px else R.drawable.play_arrow_24px,
+            setColorized(true)
+            setColor(0xFF000000.toInt())
+            addAction(R.drawable.ic_skip_previous, "Previous", prevIntent)
+            addAction(
+                if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow,
                 if (isPlaying) "Pause" else "Play",
                 playPauseIntent
             )
-            .addAction(R.drawable.skip_next_24px, "Next", nextIntent)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setSilent(true)
-            .setOngoing(isPlaying)
-            .build()
+            addAction(R.drawable.ic_skip_next, "Next", nextIntent)
+            setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            setSilent(true)
+            setOngoing(isPlaying)
+        }.build()
 
         androidNotificationManager.notify(NOTIFICATION_ID, notification)
         
         // ViewModel 상태 업데이트
         playerViewModel.updatePlaybackState(isPlaying)
-        
-        // 진행 상태 업데이트 관리
-        if (isPlaying) {
-            startProgressUpdates()
-        } else {
-            stopProgressUpdates()
-        }
-    }
-
-    private var progressUpdateJob: Job? = null
-
-    private fun startProgressUpdates() {
-        progressUpdateJob?.cancel()
-        progressUpdateJob = CoroutineScope(Dispatchers.Main).launch {
-            while (isActive) {
-                updateProgress()
-                delay(1000)
-            }
-        }
-    }
-
-    private fun updateProgress() {
-        val currentTrack = playerViewModel.currentTrack.value ?: return
-        val isPlaying = playerViewModel.isPlaying.value
-        
-        if (isPlaying) {
-            val notification = NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(currentTrack.title)
-                .setContentText(currentTrack.artist)
-                .setStyle(
-                    MediaStyle()
-                        .setMediaSession(mediaSessionCompat.sessionToken)
-                        .setShowActionsInCompactView(0, 1, 2)
-                )
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setAutoCancel(true)
-                .setProgress(
-                    playerViewModel.duration.value.toInt(),
-                    playerViewModel.currentPosition.value.toInt(),
-                    false
-                )
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setSilent(true)
-                .setOngoing(true)
-                .build()
-            
-            androidNotificationManager.notify(NOTIFICATION_ID, notification)
-        }
     }
 
     fun stopProgressUpdates() {
@@ -240,6 +220,81 @@ class PlayerNotificationManager(
             }
             androidNotificationManager.createNotificationChannel(channel)
         }
+    }
+
+    fun createNotification(track: Track, isPlaying: Boolean): android.app.Notification {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val playPauseIntent = PendingIntent.getService(
+            context, 0,
+            Intent(context, BackgroundAudioService::class.java).apply {
+                action = if (isPlaying) ACTION_PAUSE else ACTION_PLAY
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val nextIntent = PendingIntent.getBroadcast(
+            context, 1,
+            Intent(context, MediaButtonReceiver::class.java).apply {
+                action = ACTION_NEXT
+            },
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val prevIntent = PendingIntent.getBroadcast(
+            context, 2,
+            Intent(context, MediaButtonReceiver::class.java).apply {
+                action = ACTION_PREVIOUS
+            },
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationCompat.Builder(context, channelId)
+        } else {
+            @Suppress("DEPRECATION")
+            NotificationCompat.Builder(context)
+        }.apply {
+            setSmallIcon(R.drawable.ic_notification)
+            setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.ic_music_note))
+            setContentTitle(track.title)
+            setContentText(track.artist)
+            setContentIntent(pendingIntent)
+            setStyle(
+                MediaStyle()
+                    .setMediaSession(mediaSessionCompat.sessionToken)
+                    .setShowActionsInCompactView(0, 1, 2)
+            )
+            setPriority(NotificationCompat.PRIORITY_HIGH)
+            setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            setAutoCancel(true)
+            setProgress(
+                playerViewModel.duration.value.toInt(),
+                playerViewModel.currentPosition.value.toInt(),
+                false
+            )
+            setColorized(true)
+            setColor(0xFF000000.toInt())
+            addAction(R.drawable.ic_skip_previous, "Previous", prevIntent)
+            addAction(
+                if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow,
+                if (isPlaying) "Pause" else "Play",
+                playPauseIntent
+            )
+            addAction(R.drawable.ic_skip_next, "Next", nextIntent)
+            setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            setSilent(true)
+            setOngoing(isPlaying)
+        }.build()
     }
 }
 

@@ -14,10 +14,11 @@ class AndroidAudioPlayer(
     private var audioService: BackgroundAudioService? = null
     private var isBound = false
     private lateinit var playerViewModel: PlayerViewModel
+    private var isAppInRecentTasks = true  // 앱 상태 추적
     
     fun setViewModel(viewModel: PlayerViewModel) {
         playerViewModel = viewModel
-        bindService()  // ViewModel이 설정된 후 서비스 바인딩
+        bindService()
     }
 
     private val serviceConnection = object : ServiceConnection {
@@ -34,14 +35,22 @@ class AndroidAudioPlayer(
         }
     }
 
-    init {
-        bindService()
-    }
-
     private fun bindService() {
         val intent = Intent(context, BackgroundAudioService::class.java)
-        context.startService(intent) // 서비스 시작
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            context.startForegroundService(intent)
+        } else {
+            context.startService(intent)
+        }
         context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    override fun onAppStateChanged(isInRecentTasks: Boolean) {
+        this.isAppInRecentTasks = isInRecentTasks
+        if (!isInRecentTasks) {
+            // 앱이 최근 앱에서 제거되면 재생 중지
+            stop()
+        }
     }
 
     fun unbindService() {
@@ -52,6 +61,7 @@ class AndroidAudioPlayer(
     }
 
     override fun play(track: Track) {
+        if (!isAppInRecentTasks) return  // 최근 앱에 없으면 재생하지 않음
         if (!isBound) bindService()
         audioService?.playTrack(track)
     }
@@ -61,6 +71,7 @@ class AndroidAudioPlayer(
     }
 
     override fun resume() {
+        if (!isAppInRecentTasks) return  // 최근 앱에 없으면 재생하지 않음
         if (!isBound) bindService()
         audioService?.togglePlayPause()
     }
@@ -70,15 +81,16 @@ class AndroidAudioPlayer(
     }
 
     override fun seekTo(position: Long) {
+        if (!isAppInRecentTasks) return
         audioService?.seekTo(position)
     }
 
     override fun getCurrentPosition(): Long = 
-        audioService?.getCurrentPosition() ?: 0L
+        if (isAppInRecentTasks) audioService?.getCurrentPosition() ?: 0L else 0L
 
     override fun getDuration(): Long = 
-        audioService?.getDuration() ?: 0L
+        if (isAppInRecentTasks) audioService?.getDuration() ?: 0L else 0L
 
     override fun isPlaying(): Boolean = 
-        audioService?.isPlaying() ?: false
+        if (isAppInRecentTasks) audioService?.isPlaying() ?: false else false
 } 

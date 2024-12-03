@@ -11,4 +11,5 @@ interface AudioPlayer {
     fun getCurrentPosition(): Long
     fun getDuration(): Long
     fun isPlaying(): Boolean
+    fun onAppStateChanged(isInRecentTasks: Boolean)
 }

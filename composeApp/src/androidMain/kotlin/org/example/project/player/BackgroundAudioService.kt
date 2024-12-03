@@ -4,15 +4,21 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import android.support.v4.media.session.MediaSessionCompat
+import androidx.core.app.NotificationCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
+import android.support.v4.media.session.MediaSessionCompat
+import org.example.project.R
 import org.example.project.domain.model.Track
 import org.example.project.viewmodel.PlayerViewModel
 
 class BackgroundAudioService : Service() {
+    companion object {
+        private const val NOTIFICATION_ID = 1
+    }
+
     private val binder = LocalBinder()
     private lateinit var player: ExoPlayer
     private var currentTrack: Track? = null
@@ -20,6 +26,7 @@ class BackgroundAudioService : Service() {
     private lateinit var mediaSessionCompat: MediaSessionCompat
     private lateinit var notificationManager: PlayerNotificationManager
     private lateinit var playerViewModel: PlayerViewModel
+    private var isAppInRecentTasks = true
     
     inner class LocalBinder : Binder() {
         fun getService(): BackgroundAudioService = this@BackgroundAudioService
@@ -30,16 +37,31 @@ class BackgroundAudioService : Service() {
         player = ExoPlayer.Builder(this).build()
         mediaSessionCompat = MediaSessionCompat(this, "BackgroundAudioService")
         mediaSession = MediaSession.Builder(this, player).build()
+
         player.apply {
             addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
                     when (state) {
                         Player.STATE_ENDED -> {
-                            // 재생 완료 시 처리
+                            playerViewModel.updatePlaybackState(false)
+                            currentTrack?.let { track ->
+                                notificationManager.updateNotification(track, false)
+                            }
                         }
                         Player.STATE_READY -> {
-                            // 재생 준비 완료 시 처리
+                            playerViewModel.updatePlaybackState(player.isPlaying)
+                            currentTrack?.let { track ->
+                                notificationManager.updateNotification(track, player.isPlaying)
+                            }
                         }
+                    }
+                }
+
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    super.onIsPlayingChanged(isPlaying)
+                    playerViewModel.updatePlaybackState(isPlaying)
+                    currentTrack?.let { track ->
+                        notificationManager.updateNotification(track, isPlaying)
                     }
                 }
             })
@@ -48,8 +70,14 @@ class BackgroundAudioService : Service() {
 
     fun initialize(viewModel: PlayerViewModel) {
         playerViewModel = viewModel
-        notificationManager = PlayerNotificationManager(this, player, mediaSession, playerViewModel)
-        playerViewModel.setNotificationManager(notificationManager)
+        if (!::notificationManager.isInitialized) {
+            notificationManager = PlayerNotificationManager(this, player, mediaSession, playerViewModel)
+            playerViewModel.setNotificationManager(notificationManager)
+            
+            currentTrack?.let { track ->
+                notificationManager.updateNotification(track, player.isPlaying)
+            }
+        }
     }
 
     fun playTrack(track: Track) {
@@ -60,7 +88,7 @@ class BackgroundAudioService : Service() {
             prepare()
             play()
         }
-        notificationManager.updateNotification(track, true)
+        startForeground(NOTIFICATION_ID, notificationManager.createNotification(track, true))
     }
 
     fun togglePlayPause() {
@@ -69,11 +97,8 @@ class BackgroundAudioService : Service() {
         } else {
             player.play()
         }
-        
         currentTrack?.let { track ->
-            val isPlaying = player.isPlaying
-            notificationManager.updateNotification(track, isPlaying)
-            playerViewModel.updatePlaybackState(isPlaying)
+            notificationManager.updateNotification(track, player.isPlaying)
         }
     }
 
@@ -89,10 +114,8 @@ class BackgroundAudioService : Service() {
 
     fun stop() {
         player.stop()
-        player.clearMediaItems()
-        currentTrack?.let { track ->
-            notificationManager.updateNotification(track, false)
-        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -101,40 +124,9 @@ class BackgroundAudioService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        notificationManager.release()
         player.release()
         mediaSession.release()
         mediaSessionCompat.release()
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            PlayerNotificationManager.ACTION_PLAY,
-            PlayerNotificationManager.ACTION_PAUSE -> {
-                togglePlayPause()
-                currentTrack?.let { track ->
-                    val isPlaying = player.isPlaying
-                    notificationManager.updateNotification(track, isPlaying)
-                    playerViewModel.updatePlaybackState(isPlaying)
-                }
-            }
-            PlayerNotificationManager.ACTION_NEXT -> {
-                // ViewModel을 통해 다음 곡으로 이동
-                playerViewModel.skipToNext()
-            }
-            PlayerNotificationManager.ACTION_PREVIOUS -> {
-                playerViewModel.skipToPrevious()
-            }
-        }
-        return START_STICKY
-    }
-
-    private fun skipToNext() {
-        // Implement next track logic
-    }
-
-    private fun skipToPrevious() {
-        // Implement previous track logic
     }
 } 
 

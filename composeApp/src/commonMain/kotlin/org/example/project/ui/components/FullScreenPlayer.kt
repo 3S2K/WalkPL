@@ -208,14 +208,14 @@ private fun AlbumArt(
                 imageVector = Icons.Default.MusicNote,
                 contentDescription = "Album Art",
                 tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(64.dp)
+                modifier = Modifier.size(128.dp)
             )
         } else {
             Icon(
                 imageVector = Icons.Default.MusicNote,
                 contentDescription = "Default Album Art",
                 tint = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(64.dp)
+                modifier = Modifier.size(128.dp)
             )
         }
     }
