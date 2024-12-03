@@ -65,7 +65,6 @@ fun App(viewModel: PlayerViewModel) {
                         MiniPlayer(
                             track = viewModel.currentTrack.value!!,
                             isPlaying = viewModel.isPlaying.value,
-                            progress = viewModel.progress.value,
                             currentPosition = viewModel.currentPosition.value,
                             duration = viewModel.duration.value,
                             onPlayPauseClick = { viewModel.togglePlayPause() },
