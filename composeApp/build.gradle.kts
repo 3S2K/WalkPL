@@ -55,17 +55,8 @@ kotlin {
     sourceSets {
         val desktopMain by getting
         
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.accompanist.systemuicontroller)
-            implementation(libs.androidx.media3.exoplayer)
-            implementation(libs.androidx.media3.session)
-            implementation(libs.androidx.media3.common)
-            implementation(libs.androidx.media3.ui)
-            implementation(libs.androidx.media)
-        }
         commonMain.dependencies {
+            // Compose
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material)
@@ -74,10 +65,40 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            
+            // Lifecycle
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            
+            // Coroutines
             implementation(libs.kotlinx.coroutines.core)
+            
+            // Ktor
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.json)
         }
+
+        androidMain.dependencies {
+            // Compose
+            implementation(compose.preview)
+            implementation(libs.androidx.activity.compose)
+            
+            // Media
+            implementation(libs.androidx.media3.exoplayer)
+            implementation(libs.androidx.media3.session)
+            implementation(libs.androidx.media3.common)
+            implementation(libs.androidx.media3.ui)
+            implementation(libs.androidx.media)
+            
+            // UI Controllers
+            implementation(libs.accompanist.systemuicontroller)
+            
+            // Ktor
+            implementation(libs.ktor.client.android)
+            implementation(libs.ktor.client.logging)
+        }
+
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
