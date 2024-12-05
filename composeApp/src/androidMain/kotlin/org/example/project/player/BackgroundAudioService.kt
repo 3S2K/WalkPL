@@ -10,6 +10,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import android.support.v4.media.session.MediaSessionCompat
+import androidx.media3.common.PlaybackException
 import org.example.project.R
 import org.example.project.domain.model.Track
 import org.example.project.viewmodel.PlayerViewModel
@@ -34,55 +35,53 @@ class BackgroundAudioService : Service() {
     
     override fun onCreate() {
         super.onCreate()
-        player = ExoPlayer.Builder(this).build()
-        mediaSessionCompat = MediaSessionCompat(this, "BackgroundAudioService")
-        mediaSession = MediaSession.Builder(this, player).build()
-
-        player.apply {
+        println("서비스 생성됨")
+        
+        // ExoPlayer 초기화
+        player = ExoPlayer.Builder(this).build().apply {
             addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
+                    println("재생 상태 변경: $state")
                     when (state) {
-                        Player.STATE_ENDED -> {
-                            playerViewModel.updatePlaybackState(false)
-                            currentTrack?.let { track ->
-                                notificationManager.updateNotification(track, false)
-                            }
-                        }
-                        Player.STATE_READY -> {
-                            playerViewModel.updatePlaybackState(player.isPlaying)
-                            currentTrack?.let { track ->
-                                notificationManager.updateNotification(track, player.isPlaying)
-                            }
-                        }
+                        Player.STATE_READY -> println("준비됨")
+                        Player.STATE_BUFFERING -> println("버퍼링")
+                        Player.STATE_ENDED -> println("종료됨")
+                        Player.STATE_IDLE -> println("대기")
                     }
                 }
-
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    super.onIsPlayingChanged(isPlaying)
-                    playerViewModel.updatePlaybackState(isPlaying)
-                    currentTrack?.let { track ->
-                        notificationManager.updateNotification(track, isPlaying)
-                    }
+                
+                override fun onPlayerError(error: PlaybackException) {
+                    println("재생 에러: ${error.message}")
+                    error.printStackTrace()
                 }
             })
+        }
+        
+        // MediaSession 초기화
+        mediaSession = MediaSession.Builder(this, player).build()
+        
+        // MediaSessionCompat 초기화
+        mediaSessionCompat = MediaSessionCompat(this, "BackgroundAudioService").apply {
+            isActive = true
         }
     }
 
     fun initialize(viewModel: PlayerViewModel) {
         playerViewModel = viewModel
-        if (!::notificationManager.isInitialized) {
-            notificationManager = PlayerNotificationManager(this, player, mediaSession, playerViewModel)
-            playerViewModel.setNotificationManager(notificationManager)
-            
-            currentTrack?.let { track ->
-                notificationManager.updateNotification(track, player.isPlaying)
-            }
+        
+        // NotificationManager는 playerViewModel이 설정된 후에 초기화
+        notificationManager = PlayerNotificationManager(this, player, mediaSession, playerViewModel)
+        
+        currentTrack?.let { track ->
+            notificationManager.updateNotification(track, player.isPlaying)
         }
     }
 
     fun playTrack(track: Track) {
+        println("트랙 재생 시도: ${track.streamUrl}")  // 디버그 로그
+        
         currentTrack = track
-        val mediaItem = MediaItem.fromUri(track.filePath)
+        val mediaItem = MediaItem.fromUri(track.streamUrl)
         player.apply {
             setMediaItem(mediaItem)
             prepare()

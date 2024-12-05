@@ -7,10 +7,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import io.ktor.client.*
+import io.ktor.client.engine.android.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
 import org.example.project.player.AudioPlayer
 import org.example.project.player.AndroidAudioPlayer
 import org.example.project.player.AndroidMetadataReader
 import org.example.project.player.PlaylistManager
+import org.example.project.data.remote.ContentApi
+import org.example.project.data.remote.ContentApiImpl
+import org.example.project.data.repository.AndroidLocalStorageRepository
 import org.example.project.viewmodel.PlayerViewModel
 
 class MainActivity : ComponentActivity() {
@@ -38,15 +46,36 @@ class MainActivity : ComponentActivity() {
         // raw 리소스 URI 생성
         val testSongUri = "android.resource://${packageName}/raw/test_song"
 
+        // HTTP 클라이언트 설정
+        val client = HttpClient(Android) {
+            install(ContentNegotiation) {
+                json(Json {
+                    ignoreUnknownKeys = true
+                    prettyPrint = true
+                    isLenient = true
+                })
+            }
+        }
+
+        // ContentApi 초기화
+        val contentApi = ContentApiImpl(client)
+
+        // LocalStorageRepository 초기화
+        val localStorageRepository = AndroidLocalStorageRepository(this)
+
         // 필요한 인스턴스들 초기화
         playlistManager = PlaylistManager()
         val metadataReader = AndroidMetadataReader(this)
-        audioPlayer = AndroidAudioPlayer(this)
+        audioPlayer = AndroidAudioPlayer(
+            context = this,
+            localStorageRepository = localStorageRepository
+        )
 
         playerViewModel = PlayerViewModel(
             audioPlayer = audioPlayer,
             playlistManager = playlistManager,
             metadataReader = metadataReader,
+            contentApi = contentApi,
             testSongUri = testSongUri
         )
 

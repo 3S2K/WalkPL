@@ -11,13 +11,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.example.project.domain.model.ContentType
 import org.example.project.util.viewModelScope
 import org.example.project.player.NotificationManager
+import org.example.project.data.remote.ContentApi
 
 class PlayerViewModel(
     private val audioPlayer: AudioPlayer,
     private val playlistManager: PlaylistManager,
     private val metadataReader: MetadataReader,
+    private val contentApi: ContentApi,
     val testSongUri: String? = null
 ) : ViewModel() {
     private val _currentTrack = mutableStateOf<Track?>(null)
@@ -63,16 +66,7 @@ class PlayerViewModel(
         positionUpdateJob?.cancel()
     }
 
-    fun playTrack(filePath: String) {
-        val metadata = metadataReader.getMetadata(filePath)
-        val track = Track(
-            id = filePath,
-            title = metadata.title ?: "Unknown Title",
-            artist = metadata.artist ?: "Unknown Artist",
-            filePath = filePath,
-            album = metadata.album,
-            duration = metadata.duration
-        )
+    fun playTrack(track: Track) {
         _currentTrack.value = track
         audioPlayer.play(track)
         _isPlaying.value = true
@@ -98,9 +92,8 @@ class PlayerViewModel(
     }
 
     fun skipToNext() {
-        // PlaylistManager를 통해 다음 곡으로 이동
         playlistManager.skipToNext()?.let { nextTrack ->
-            playTrack(nextTrack.filePath)
+            playTrack(nextTrack)
         }
     }
 
@@ -109,13 +102,13 @@ class PlayerViewModel(
     fun setPlaylist(tracks: List<Track>, startIndex: Int = 0) {
         playlistManager.setPlaylist(tracks, startIndex)
         playlistManager.getCurrentTrack()?.let { track ->
-            playTrack(track.filePath)
+            playTrack(track)
         }
     }
 
     fun skipToPrevious() {
         playlistManager.skipToPrevious()?.let { previousTrack ->
-            playTrack(previousTrack.filePath)
+            playTrack(previousTrack)
         }
     }
 
@@ -125,5 +118,14 @@ class PlayerViewModel(
 
     fun setNotificationManager(manager: NotificationManager) {
         notificationManager = manager
+    }
+
+    suspend fun loadTracks(): List<Track> {
+        return try {
+            contentApi.getContents()
+        } catch (e: Exception) {
+            println("트랙 로딩 실패: ${e.message}")
+            emptyList()
+        }
     }
 }

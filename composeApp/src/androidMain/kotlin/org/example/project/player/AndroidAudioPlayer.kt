@@ -5,34 +5,56 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import org.example.project.core.Constants
 import org.example.project.domain.model.Track
+import org.example.project.domain.repository.LocalStorageRepository
 import org.example.project.viewmodel.PlayerViewModel
 
 class AndroidAudioPlayer(
-    private val context: Context
+    private val context: Context,
+    private val localStorageRepository: LocalStorageRepository
 ) : AudioPlayer {
     private var audioService: BackgroundAudioService? = null
     private var isBound = false
     private lateinit var playerViewModel: PlayerViewModel
-    private var isAppInRecentTasks = true  // 앱 상태 추적
     
     fun setViewModel(viewModel: PlayerViewModel) {
         playerViewModel = viewModel
         bindService()
     }
 
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as BackgroundAudioService.LocalBinder
-            audioService = binder.getService()
-            audioService?.initialize(playerViewModel)
-            isBound = true
+    override fun play(track: Track) {
+        println("재생 시도: ${track.streamUrl}")
+        
+        if (!isBound) {
+            println("서비스 바인딩 안됨, 바인딩 시도")
+            bindService()
         }
+        
+        val fullUrl = if (!track.streamUrl.startsWith("http")) {
+            "${Constants.BASE_URL}${track.streamUrl}"
+        } else {
+            track.streamUrl
+        }
+        println("최종 재생 URL: $fullUrl")
+        
+        audioService?.playTrack(track.copy(streamUrl = fullUrl))
+    }
 
-        override fun onServiceDisconnected(name: ComponentName?) {
-            audioService = null
-            isBound = false
-        }
+    override fun pause() {
+        println("일시정지 시도")
+        audioService?.togglePlayPause()
+    }
+
+    override fun resume() {
+        println("재생 재개 시도")
+        if (!isBound) bindService()
+        audioService?.togglePlayPause()
+    }
+
+    override fun stop() {
+        println("정지 시도")
+        audioService?.stop()
     }
 
     private fun bindService() {
@@ -45,52 +67,53 @@ class AndroidAudioPlayer(
         context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            println("서비스 연결됨")
+            val binder = service as BackgroundAudioService.LocalBinder
+            audioService = binder.getService()
+            audioService?.initialize(playerViewModel)
+            isBound = true
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            println("서비스 연결 해제됨")
+            audioService = null
+            isBound = false
+        }
+    }
+
+    override fun seekTo(position: Long) {
+        if (!isBound) bindService()
+        audioService?.seekTo(position)
+    }
+
+    override fun getCurrentPosition(): Long = 
+        if (isBound) audioService?.getCurrentPosition() ?: 0L else 0L
+
+    override fun getDuration(): Long = 
+        if (isBound) audioService?.getDuration() ?: 0L else 0L
+
+    override fun isPlaying(): Boolean = 
+        if (isBound) audioService?.isPlaying() ?: false else false
+
     override fun onAppStateChanged(isInRecentTasks: Boolean) {
-        this.isAppInRecentTasks = isInRecentTasks
+        println("앱 상태 변경: 최근 작업에 있음 = $isInRecentTasks")  // 디버그 로그
         if (!isInRecentTasks) {
-            // 앱이 최근 앱에서 제거되면 재생 중지
-            stop()
+            stop()  // 앱이 최근 작업에 없으면 재생 중지
         }
     }
 
     fun unbindService() {
         if (isBound) {
-            context.unbindService(serviceConnection)
-            isBound = false
+            try {
+                context.unbindService(serviceConnection)
+                audioService = null
+                isBound = false
+                println("서비스 바인딩 해제 완료")
+            } catch (e: Exception) {
+                println("서비스 바인딩 해제 실패: ${e.message}")
+            }
         }
     }
-
-    override fun play(track: Track) {
-        if (!isAppInRecentTasks) return  // 최근 앱에 없으면 재생하지 않음
-        if (!isBound) bindService()
-        audioService?.playTrack(track)
-    }
-
-    override fun pause() {
-        audioService?.togglePlayPause()
-    }
-
-    override fun resume() {
-        if (!isAppInRecentTasks) return  // 최근 앱에 없으면 재생하지 않음
-        if (!isBound) bindService()
-        audioService?.togglePlayPause()
-    }
-
-    override fun stop() {
-        audioService?.stop()
-    }
-
-    override fun seekTo(position: Long) {
-        if (!isAppInRecentTasks) return
-        audioService?.seekTo(position)
-    }
-
-    override fun getCurrentPosition(): Long = 
-        if (isAppInRecentTasks) audioService?.getCurrentPosition() ?: 0L else 0L
-
-    override fun getDuration(): Long = 
-        if (isAppInRecentTasks) audioService?.getDuration() ?: 0L else 0L
-
-    override fun isPlaying(): Boolean = 
-        if (isAppInRecentTasks) audioService?.isPlaying() ?: false else false
 } 
