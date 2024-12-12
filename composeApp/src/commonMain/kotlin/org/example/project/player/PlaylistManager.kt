@@ -3,7 +3,6 @@ package org.example.project.player
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.example.project.domain.model.Playlist
@@ -22,26 +21,22 @@ class PlaylistManager {
     companion object {
         const val LIKES_PLAYLIST_ID = "likes"
         const val MY_MUSIC_PLAYLIST_ID = "my_music"
-        const val OFFLINE_PLAYLIST_ID = "offline"
 
         val DEFAULT_PLAYLISTS = listOf(
             Playlist(LIKES_PLAYLIST_ID, "좋아요 표시한 음악", emptyList()),
             Playlist(MY_MUSIC_PLAYLIST_ID, "만든 음악", emptyList()),
-            Playlist(OFFLINE_PLAYLIST_ID, "오프라인 저장한 노래", emptyList())
         )
 
         fun getPlaylistIcon(playlistId: String): ImageVector {
             return when (playlistId) {
                 LIKES_PLAYLIST_ID -> Icons.Default.Favorite
                 MY_MUSIC_PLAYLIST_ID -> Icons.Default.Build
-                OFFLINE_PLAYLIST_ID -> Icons.Default.Download
                 else -> Icons.Default.Album
             }
         }
 
         fun isSelectablePlaylist(playlistId: String): Boolean {
-            return playlistId != MY_MUSIC_PLAYLIST_ID && 
-                   playlistId != OFFLINE_PLAYLIST_ID
+            return playlistId != MY_MUSIC_PLAYLIST_ID
         }
     }
 
@@ -178,6 +173,6 @@ class PlaylistManager {
 
     // 선택 가능한 플레이리스트만 반환하는 메서드 추가
     fun getSelectablePlaylists(): List<Playlist> {
-        return getPlaylists().filter { PlaylistManager.isSelectablePlaylist(it.id) }
+        return getPlaylists().filter { isSelectablePlaylist(it.id) }
     }
 }
