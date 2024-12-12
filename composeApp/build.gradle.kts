@@ -81,6 +81,9 @@ kotlin {
             
             // Serialization
             implementation(libs.kotlinx.serialization.json)
+            
+            // DateTime
+            implementation(libs.kotlinx.datetime)
         }
 
         androidMain.dependencies {
@@ -105,6 +108,7 @@ kotlin {
 
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+            implementation(compose.desktop.common)
             implementation(libs.kotlinx.coroutines.swing)
         }
     }
@@ -140,6 +144,7 @@ android {
 dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material3.android)
+    implementation(libs.androidx.ui.android)
     debugImplementation(compose.uiTooling)
 }
 

@@ -11,10 +11,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.example.project.domain.model.ContentType
 import org.example.project.util.viewModelScope
 import org.example.project.player.NotificationManager
 import org.example.project.data.remote.ContentApi
+import org.example.project.domain.model.RepeatMode
+import org.example.project.domain.model.Playlist
+import androidx.compose.runtime.mutableStateListOf
 
 class PlayerViewModel(
     private val audioPlayer: AudioPlayer,
@@ -38,12 +40,30 @@ class PlayerViewModel(
     private val _duration = mutableStateOf(0L)
     val duration: State<Long> = _duration
 
+    private val _isShuffled = mutableStateOf(false)
+    val isShuffled: State<Boolean> = _isShuffled
+
+    private val _repeatMode = mutableStateOf(RepeatMode.NONE)
+    val repeatMode: State<RepeatMode> = _repeatMode
+
     private var positionUpdateJob: Job? = null
 
     private var notificationManager: NotificationManager? = null
 
+    private val _playlists = mutableStateOf<List<Playlist>>(emptyList())
+    val playlists: State<List<Playlist>> = _playlists
+
+    private val _showPlaylistDialog = mutableStateOf(false)
+    val showPlaylistDialog: State<Boolean> = _showPlaylistDialog
+
+    private val _isLiked = mutableStateOf(false)
+    val isLiked: State<Boolean> = _isLiked
+
+    private val _likedTracks = mutableStateListOf<Track>()
+
     init {
         startPositionUpdates()
+        updatePlaylists()
     }
 
     private fun startPositionUpdates() {
@@ -70,6 +90,7 @@ class PlayerViewModel(
         _currentTrack.value = track
         audioPlayer.play(track)
         _isPlaying.value = true
+        checkIsLiked(track)
     }
 
     fun togglePlayPause() {
@@ -126,6 +147,84 @@ class PlayerViewModel(
         } catch (e: Exception) {
             println("트랙 로딩 실패: ${e.message}")
             emptyList()
+        }
+    }
+
+    fun toggleShuffle() {
+        playlistManager.toggleShuffle()
+        _isShuffled.value = playlistManager.isShuffled()
+    }
+
+    fun toggleRepeatMode() {
+        val nextMode = when (_repeatMode.value) {
+            RepeatMode.NONE -> RepeatMode.ALL
+            RepeatMode.ALL -> RepeatMode.ONE
+            RepeatMode.ONE -> RepeatMode.NONE
+        }
+        playlistManager.setRepeatMode(nextMode)
+        _repeatMode.value = nextMode
+    }
+
+    fun createPlaylist(name: String) {
+        playlistManager.createPlaylist(name)
+        updatePlaylists()
+    }
+
+    fun addToPlaylist(playlistId: String, track: Track) {
+        playlistManager.addToPlaylist(playlistId, track)
+        if (playlistId == PlaylistManager.LIKES_PLAYLIST_ID) {
+            _isLiked.value = true
+        }
+        updatePlaylists()
+    }
+
+    fun removeFromPlaylist(playlistId: String, track: Track) {
+        playlistManager.removeFromPlaylist(playlistId, track)
+        if (playlistId == PlaylistManager.LIKES_PLAYLIST_ID) {
+            _isLiked.value = false
+        }
+        updatePlaylists()
+    }
+
+    fun showAddToPlaylistDialog() {
+        _showPlaylistDialog.value = true
+    }
+
+    fun hideAddToPlaylistDialog() {
+        _showPlaylistDialog.value = false
+    }
+
+    fun toggleLike() {
+        currentTrack.value?.let { track ->
+            val isCurrentlyLiked = playlistManager.getPlaylist(PlaylistManager.LIKES_PLAYLIST_ID)
+                ?.tracks
+                ?.contains(track) ?: false
+            
+            if (!isCurrentlyLiked) {
+                playlistManager.addToPlaylist(PlaylistManager.LIKES_PLAYLIST_ID, track)
+            } else {
+                playlistManager.removeFromPlaylist(PlaylistManager.LIKES_PLAYLIST_ID, track)
+            }
+            
+            _isLiked.value = !isCurrentlyLiked
+            updatePlaylists()
+        }
+    }
+
+    private fun checkIsLiked(track: Track) {
+        _isLiked.value = playlistManager.getPlaylist(PlaylistManager.LIKES_PLAYLIST_ID)
+            ?.tracks
+            ?.contains(track) ?: false
+    }
+
+    private fun updatePlaylists() {
+        _playlists.value = playlistManager.getPlaylists()
+    }
+
+    fun playPlaylist(playlist: Playlist) {
+        if (playlist.tracks.isNotEmpty()) {
+            setPlaylist(playlist.tracks)
+            playTrack(playlist.tracks.first())
         }
     }
 }

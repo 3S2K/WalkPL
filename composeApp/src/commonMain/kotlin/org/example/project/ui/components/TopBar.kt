@@ -18,7 +18,7 @@ import walkpl.composeapp.generated.resources.app_logo
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
-fun TopBar() {
+fun TopBar(currentRoute: String = "home") {
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -42,7 +42,10 @@ fun TopBar() {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "WalkPL",
+                        text = when (currentRoute) {
+                            "library" -> "보관함"
+                            else -> "WalkPL"
+                        },
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )

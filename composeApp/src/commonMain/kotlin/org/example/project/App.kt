@@ -13,6 +13,7 @@ import org.example.project.ui.components.FullScreenPlayer
 import org.example.project.ui.components.MiniPlayer
 import org.example.project.ui.components.TopBar
 import org.example.project.ui.screens.home.HomeScreen
+import org.example.project.ui.screens.library.LibraryScreen
 import org.example.project.ui.theme.AppTheme
 import org.example.project.viewmodel.PlayerViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -23,9 +24,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun App(viewModel: PlayerViewModel) {
     var currentRoute by remember { mutableStateOf("home") }
     var showFullScreenPlayer by remember { mutableStateOf(false) }
-    val bottomSheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true
-    )
+    val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     AppTheme {
         AndroidSystemBars()
@@ -35,14 +35,27 @@ fun App(viewModel: PlayerViewModel) {
                 modifier = Modifier.fillMaxSize(),
                 containerColor = MaterialTheme.colorScheme.background,
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                topBar = { TopBar() },
-                bottomBar = { 
-                    BottomNavigationBar(
-                        currentRoute = currentRoute,
-                        onNavigateToRoute = { route ->
-                            currentRoute = route
+                topBar = { TopBar(currentRoute = currentRoute) },
+                bottomBar = {
+                    Column {
+                        if (viewModel.currentTrack.value != null) {
+                            MiniPlayer(
+                                track = viewModel.currentTrack.value!!,
+                                isPlaying = viewModel.isPlaying.value,
+                                currentPosition = viewModel.currentPosition.value,
+                                duration = viewModel.duration.value,
+                                onPlayPauseClick = { viewModel.togglePlayPause() },
+                                onNextClick = { viewModel.skipToNext() },
+                                onPlayerClick = { showFullScreenPlayer = true }
+                            )
                         }
-                    )
+                        BottomNavigationBar(
+                            currentRoute = currentRoute,
+                            onNavigateToRoute = { route ->
+                                currentRoute = route
+                            }
+                        )
+                    }
                 }
             ) { paddingValues ->
                 Box(modifier = Modifier.padding(paddingValues)) {
@@ -50,37 +63,16 @@ fun App(viewModel: PlayerViewModel) {
                         "home" -> HomeScreen(viewModel)
                         "create" -> { /* 만들기 화면 컴포넌트 */ }
                         "walk" -> { /* 걸음 화면 컴포넌트 */ }
-                        "library" -> { /* 보관함 화면 컴포넌트 */ }
+                        "library" -> LibraryScreen(viewModel)
                     }
                 }
             }
             
-            // Player 영역
             if (viewModel.currentTrack.value != null) {
                 Box(
                     modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
-                    // MiniPlayer
-                    Column {
-                        MiniPlayer(
-                            track = viewModel.currentTrack.value!!,
-                            isPlaying = viewModel.isPlaying.value,
-                            currentPosition = viewModel.currentPosition.value,
-                            duration = viewModel.duration.value,
-                            onPlayPauseClick = { viewModel.togglePlayPause() },
-                            onNextClick = { viewModel.skipToNext() },
-                            onPlayerClick = { showFullScreenPlayer = true }
-                        )
-                        Spacer(modifier = Modifier.height(56.dp))
-                    }
-
-                    // FullScreenPlayer as ModalBottomSheet
                     if (showFullScreenPlayer) {
-                        val sheetState = rememberModalBottomSheetState(
-                            skipPartiallyExpanded = true
-                        )
-                        val scope = rememberCoroutineScope()
-
                         ModalBottomSheet(
                             onDismissRequest = { 
                                 scope.launch {
@@ -100,15 +92,29 @@ fun App(viewModel: PlayerViewModel) {
                                     track = track,
                                     isPlaying = viewModel.isPlaying.value,
                                     progress = viewModel.progress.value,
-                                    isLiked = false,
+                                    isLiked = viewModel.isLiked.value,
+                                    isShuffled = viewModel.isShuffled.value,
+                                    repeatMode = viewModel.repeatMode.value,
+                                    playlists = viewModel.playlists.value,
+                                    showPlaylistDialog = viewModel.showPlaylistDialog.value,
                                     onProgressChange = { progress -> 
                                         viewModel.seekTo((progress * viewModel.duration.value).toLong())
                                     },
                                     onPlayPauseClick = { viewModel.togglePlayPause() },
                                     onPreviousClick = { viewModel.skipToPrevious() },
                                     onNextClick = { viewModel.skipToNext() },
-                                    onShuffleClick = { /* TODO */ },
-                                    onRepeatClick = { /* TODO */ },
+                                    onShuffleClick = { viewModel.toggleShuffle() },
+                                    onRepeatClick = { viewModel.toggleRepeatMode() },
+                                    onLikeClick = { viewModel.toggleLike() },
+                                    onAddToPlaylistClick = { viewModel.showAddToPlaylistDialog() },
+                                    onAddToPlaylist = { playlistId -> 
+                                        viewModel.addToPlaylist(playlistId, track)
+                                        viewModel.hideAddToPlaylistDialog()
+                                    },
+                                    onCreatePlaylist = { name -> 
+                                        viewModel.createPlaylist(name)
+                                    },
+                                    onDismissPlaylistDialog = { viewModel.hideAddToPlaylistDialog() },
                                     onBackClick = {
                                         scope.launch {
                                             sheetState.hide()
@@ -116,8 +122,6 @@ fun App(viewModel: PlayerViewModel) {
                                         }
                                     },
                                     onMoreClick = { /* TODO */ },
-                                    onAddToPlaylistClick = { /* TODO */ },
-                                    onLikeClick = { /* TODO */ },
                                     onShareClick = { /* TODO */ },
                                     onTrackClick = { /* TODO */ },
                                     onLyricsClick = { /* TODO */ }

@@ -17,9 +17,111 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.example.project.domain.model.Playlist
+import org.example.project.domain.model.RepeatMode
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.example.project.domain.model.Track
 import kotlin.math.floor
+
+@Composable
+fun FullScreenPlayerScreen(
+    track: Track,
+    isPlaying: Boolean,
+    progress: Float,
+    isLiked: Boolean = false,
+    onProgressChange: (Float) -> Unit,
+    onPlayPauseClick: () -> Unit,
+    onPreviousClick: () -> Unit,
+    onNextClick: () -> Unit,
+    onShuffleClick: () -> Unit,
+    onRepeatClick: () -> Unit,
+    onBackClick: () -> Unit,
+    onMoreClick: () -> Unit,
+    onAddToPlaylistClick: () -> Unit,
+    onLikeClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onTrackClick: () -> Unit,
+    onLyricsClick: () -> Unit,
+    isShuffled: Boolean,
+    repeatMode: RepeatMode,
+    playlists: List<Playlist>,
+    showPlaylistDialog: Boolean,
+    onAddToPlaylist: (String) -> Unit,
+    onCreatePlaylist: (String) -> Unit,
+    onDismissPlaylistDialog: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // 메인 플레이어 UI만 렌더링
+    FullScreenPlayer(
+        track = track,
+        isPlaying = isPlaying,
+        progress = progress,
+        isLiked = isLiked,
+        onProgressChange = onProgressChange,
+        onPlayPauseClick = onPlayPauseClick,
+        onPreviousClick = onPreviousClick,
+        onNextClick = onNextClick,
+        onShuffleClick = onShuffleClick,
+        onRepeatClick = onRepeatClick,
+        onBackClick = onBackClick,
+        onMoreClick = onMoreClick,
+        onAddToPlaylistClick = onAddToPlaylistClick,
+        onLikeClick = onLikeClick,
+        onShareClick = onShareClick,
+        onTrackClick = onTrackClick,
+        onLyricsClick = onLyricsClick,
+        isShuffled = isShuffled,
+        repeatMode = repeatMode,
+        playlists = playlists,
+        showPlaylistDialog = showPlaylistDialog,
+        onAddToPlaylist = onAddToPlaylist,
+        onCreatePlaylist = onCreatePlaylist,
+        onDismissPlaylistDialog = onDismissPlaylistDialog,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun PlaylistDialogs(
+    showPlaylistDialog: Boolean,
+    showNewPlaylistDialog: Boolean,
+    playlists: List<Playlist>,
+    onDismissPlaylistDialog: () -> Unit,
+    onCreatePlaylist: (String) -> Unit,
+    onAddToPlaylist: (String) -> Unit,
+    onNewPlaylistDialogDismiss: () -> Unit,
+    onShowNewPlaylistDialog: () -> Unit
+) {
+    if (showPlaylistDialog) {
+        AddToPlaylistDialog(
+            playlists = playlists,
+            onDismiss = onDismissPlaylistDialog,
+            onCreateNew = onCreatePlaylist,
+            onSelectPlaylist = { playlistId ->
+                onAddToPlaylist(playlistId)
+                onDismissPlaylistDialog()
+            },
+            showNewPlaylistDialog = showNewPlaylistDialog,
+            onNewPlaylistDialogDismiss = onNewPlaylistDialogDismiss,
+            onShowNewPlaylistDialog = onShowNewPlaylistDialog
+        )
+    }
+
+    if (showNewPlaylistDialog) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            NewPlaylistDialog(
+                onDismiss = onNewPlaylistDialogDismiss,
+                onCreateNew = { name ->
+                    onCreatePlaylist(name)
+                    onNewPlaylistDialogDismiss()
+                }
+            )
+        }
+    }
+}
 
 @Composable
 fun FullScreenPlayer(
@@ -40,8 +142,17 @@ fun FullScreenPlayer(
     onShareClick: () -> Unit,
     onTrackClick: () -> Unit,
     onLyricsClick: () -> Unit,
+    isShuffled: Boolean,
+    repeatMode: RepeatMode,
+    playlists: List<Playlist>,
+    showPlaylistDialog: Boolean,
+    onAddToPlaylist: (String) -> Unit,
+    onCreatePlaylist: (String) -> Unit,
+    onDismissPlaylistDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showNewPlaylistDialog by remember { mutableStateOf(false) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -103,6 +214,8 @@ fun FullScreenPlayer(
 
                 PlayerControls(
                     isPlaying = isPlaying,
+                    isShuffled = isShuffled,
+                    repeatMode = repeatMode,
                     onPlayPauseClick = onPlayPauseClick,
                     onPreviousClick = onPreviousClick,
                     onNextClick = onNextClick,
@@ -120,6 +233,18 @@ fun FullScreenPlayer(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+
+        // 다이얼로그들을 별도로 분리
+        PlaylistDialogs(
+            showPlaylistDialog = showPlaylistDialog,
+            showNewPlaylistDialog = showNewPlaylistDialog,
+            playlists = playlists,
+            onDismissPlaylistDialog = onDismissPlaylistDialog,
+            onCreatePlaylist = onCreatePlaylist,
+            onAddToPlaylist = onAddToPlaylist,
+            onNewPlaylistDialogDismiss = { showNewPlaylistDialog = false },
+            onShowNewPlaylistDialog = { showNewPlaylistDialog = true }
+        )
     }
 }
 
@@ -187,7 +312,6 @@ private fun TrackInfo(
     }
 }
 
-@OptIn(ExperimentalResourceApi::class)
 @Composable
 private fun AlbumArt(
     albumArt: ByteArray?,
@@ -260,6 +384,8 @@ private fun PlayerProgress(
 @Composable
 private fun PlayerControls(
     isPlaying: Boolean,
+    isShuffled: Boolean,
+    repeatMode: RepeatMode,
     onPlayPauseClick: () -> Unit,
     onPreviousClick: () -> Unit,
     onNextClick: () -> Unit,
@@ -322,7 +448,10 @@ private fun PlayerControls(
         
         IconButton(onClick = onRepeatClick) {
             Icon(
-                imageVector = Icons.Default.Repeat,
+                imageVector = when (repeatMode) {
+                    RepeatMode.ONE -> Icons.Default.RepeatOne
+                    else -> Icons.Default.Repeat
+                },
                 contentDescription = "Repeat",
                 tint = Color.White
             )
@@ -365,16 +494,19 @@ private fun ActionButtons(
     onShareClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onAddToPlaylistClick) {
+        IconButton(
+            onClick = {
+                println("재생목록에 추가 버튼 클릭됨")
+                onAddToPlaylistClick()
+            }
+        ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
-                contentDescription = "Add to playlist",
+                contentDescription = "재생목록에 추가",
                 tint = Color.White
             )
         }
