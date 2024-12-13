@@ -5,8 +5,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,9 +19,53 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.example.project.domain.model.Track
 import org.example.project.viewmodel.PlayerViewModel
+import androidx.compose.ui.graphics.Color
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: PlayerViewModel) {
+    var selectedTab by remember { mutableStateOf(0) }
+    
+    Column {
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = Color.White,
+            indicator = { tabPositions -> 
+                TabRowDefaults.Indicator(
+                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                    color = Color.White
+                )
+            }
+        ) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = { Text("홈", color = if (selectedTab == 0) Color.White else Color.White.copy(alpha = 0.6f)) }
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = { Text("Shorts", color = if (selectedTab == 1) Color.White else Color.White.copy(alpha = 0.6f)) }
+            )
+            Tab(
+                selected = selectedTab == 2,
+                onClick = { selectedTab = 2 },
+                text = { Text("뉴스", color = if (selectedTab == 2) Color.White else Color.White.copy(alpha = 0.6f)) }
+            )
+        }
+
+        // 탭 컨텐츠
+        when (selectedTab) {
+            0 -> TracksList(viewModel)
+            1 -> ShortsContent()
+            2 -> NewsContent()
+        }
+    }
+}
+
+@Composable
+private fun TracksList(viewModel: PlayerViewModel) {
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -26,14 +74,8 @@ fun HomeScreen(viewModel: PlayerViewModel) {
         try {
             isLoading = true
             tracks = viewModel.loadTracks()
-            println("로드된 트랙 수: ${tracks.size}")  // 디버그 로그
-            tracks.forEach { track ->
-                println("트랙 정보: ${track.title} - ${track.artist}")  // 각 트랙 정보 출력
-            }
         } catch (e: Exception) {
             error = e.message
-            println("트랙 로딩 에러: ${e.message}")  // 에러 로그
-            e.printStackTrace()
         } finally {
             isLoading = false
         }
@@ -52,8 +94,10 @@ fun HomeScreen(viewModel: PlayerViewModel) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(text = "에러 발생")
-                    Text(text = error ?: "알 수 없는 에러", 
-                         style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = error ?: "알 수 없는 에러",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
             tracks.isEmpty() -> {
@@ -74,6 +118,26 @@ fun HomeScreen(viewModel: PlayerViewModel) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ShortsContent() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Shorts 컨텐츠가 준비 중입니다")
+    }
+}
+
+@Composable
+private fun NewsContent() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("뉴스 컨텐츠가 준비 중입니다")
     }
 }
 
