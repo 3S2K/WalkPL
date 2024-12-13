@@ -29,6 +29,7 @@ class PlayerNotificationManager(
     private val androidNotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
     private val channelId = "music_playback_channel"
     private val mediaSessionCompat = MediaSessionCompat(context, "PlayerNotificationManager")
+    private val notificationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     init {
         createNotificationChannel()
@@ -69,7 +70,7 @@ class PlayerNotificationManager(
 
     private fun startProgressUpdates() {
         progressUpdateJob?.cancel()
-        progressUpdateJob = CoroutineScope(Dispatchers.Main).launch {
+        progressUpdateJob = notificationScope.launch {
             while (isActive) {
                 playerViewModel.currentTrack.value?.let { track ->
                     updateNotificationWithProgress(
@@ -295,6 +296,10 @@ class PlayerNotificationManager(
             setSilent(true)
             setOngoing(isPlaying)
         }.build()
+    }
+
+    fun cleanup() {
+        notificationScope.cancel()
     }
 }
 

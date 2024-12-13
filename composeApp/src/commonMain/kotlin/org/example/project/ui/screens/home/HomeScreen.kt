@@ -16,6 +16,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import org.example.project.viewmodel.LoadingState
 
 @Composable
 fun HomeScreen(viewModel: PlayerViewModel) {
@@ -25,8 +26,11 @@ fun HomeScreen(viewModel: PlayerViewModel) {
     
     // StateFlow를 State로 변환
     val tracks by viewModel.tracks.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val loadingState by viewModel.loadingState.collectAsState()
     val isError by viewModel.isError.collectAsState()
+
+    // LoadingState에서 isLoading 추출
+    val isLoading = loadingState == LoadingState.Loading
 
     // 뉴스 트랙과 날짜 미리 필터링
     val newsTracks = remember(tracks) {

@@ -5,12 +5,9 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.coroutines.withTimeout
 import org.example.project.domain.model.Track
 import org.example.project.domain.model.ContentType as TrackContentType
 import org.example.project.core.Constants
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.Duration.Companion.milliseconds
 
 interface ContentApi {
     suspend fun getContents(type: TrackContentType? = null): List<Track>
@@ -23,27 +20,28 @@ interface ContentApi {
 class ContentApiImpl(private val client: HttpClient) : ContentApi {
     override suspend fun getContents(type: TrackContentType?): List<Track> {
         return try {
-            withTimeout(5000) { // 5초 타임아웃 설정
-                val response = client.get("${Constants.BASE_URL}${Constants.Endpoints.CONTENTS}") {
-                    header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                }
-                if (!response.status.isSuccess()) {
-                    println("서버 응답 실패: ${response.status}")
-                    throw Exception("서버 응답 실패: ${response.status}")
-                }
-                response.body<List<Track>>()
+            val response = client.get("${Constants.BASE_URL}${Constants.Endpoints.CONTENTS}") {
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            }
+            
+            when {
+                response.status.isSuccess() -> response.body()
+                response.status.value == 404 -> emptyList()
+                else -> throw Exception("서버 응답 실패: ${response.status}")
             }
         } catch (e: Exception) {
             println("API 호출 실패: ${e.message}")
-            emptyList()
+            throw e
         }
     }
 
     override suspend fun getContent(id: String): Track {
         return try {
-            val response = client.get("${Constants.BASE_URL}${Constants.Endpoints.CONTENTS}/$id")
+            val response = client.get("${Constants.BASE_URL}${Constants.Endpoints.CONTENTS}/$id") {
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            }
             println("단일 트랙 응답: ${response.bodyAsText()}")
-            response.body<Track>()
+            response.body()
         } catch (e: Exception) {
             println("트랙 조회 실패: ${e.message}")
             throw e
@@ -54,9 +52,10 @@ class ContentApiImpl(private val client: HttpClient) : ContentApi {
         return try {
             val response = client.get("${Constants.BASE_URL}${Constants.Endpoints.SEARCH}") {
                 parameter("query", query)
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             }
             println("검색 응답: ${response.bodyAsText()}")
-            response.body<List<Track>>()
+            response.body()
         } catch (e: Exception) {
             println("검색 실패: ${e.message}")
             emptyList()
@@ -71,7 +70,7 @@ class ContentApiImpl(private val client: HttpClient) : ContentApi {
             val response = client.get(fullUrl)
             val contentLength = response.contentLength() ?: 0L
             
-            return response.bodyAsChannel().let { channel ->
+            response.bodyAsChannel().let { channel ->
                 val buffer = ByteArray(contentLength.toInt())
                 var offset = 0
                 
@@ -94,13 +93,11 @@ class ContentApiImpl(private val client: HttpClient) : ContentApi {
 
     override suspend fun checkConnection() {
         try {
-            withTimeout(5000) {  // 5초 타임아웃
-                val response = client.get("${Constants.BASE_URL}${Constants.Endpoints.CONTENTS}") {
-                    header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                }
-                if (!response.status.isSuccess()) {
-                    throw Exception("서버 응답 실패: ${response.status}")
-                }
+            val response = client.get("${Constants.BASE_URL}${Constants.Endpoints.CONTENTS}") {
+                header(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            }
+            if (!response.status.isSuccess()) {
+                throw Exception("서버 응답 실패: ${response.status}")
             }
         } catch (e: Exception) {
             throw Exception("서버 연결 실패: ${e.message}")

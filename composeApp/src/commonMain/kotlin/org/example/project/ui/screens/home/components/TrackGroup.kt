@@ -35,7 +35,7 @@ fun TrackGroup(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp),
+                .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -107,6 +107,8 @@ fun TrackGroup(
             }
         }
 
+        Spacer(modifier = Modifier.height(4.dp))
+
         if (tracks.isEmpty() || isError) {
             Box(
                 modifier = Modifier
@@ -122,13 +124,15 @@ fun TrackGroup(
                 )
             }
         } else {
-            LazyColumn {
+            LazyColumn(
+                contentPadding = PaddingValues(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 items(tracks) { track ->
                     TrackItem(
                         track = track,
                         onTrackClick = { onTrackClick(track) }
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }

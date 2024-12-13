@@ -11,6 +11,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import android.support.v4.media.session.MediaSessionCompat
 import androidx.media3.common.PlaybackException
+import kotlinx.coroutines.*
 import org.example.project.R
 import org.example.project.domain.model.Track
 import org.example.project.viewmodel.PlayerViewModel
@@ -28,6 +29,7 @@ class BackgroundAudioService : Service() {
     private lateinit var notificationManager: PlayerNotificationManager
     private lateinit var playerViewModel: PlayerViewModel
     private var isAppInRecentTasks = true
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     inner class LocalBinder : Binder() {
         fun getService(): BackgroundAudioService = this@BackgroundAudioService
@@ -78,16 +80,22 @@ class BackgroundAudioService : Service() {
     }
 
     fun playTrack(track: Track) {
-        println("트랙 재생 시도: ${track.streamUrl}")  // 디버그 로그
-        
-        currentTrack = track
-        val mediaItem = MediaItem.fromUri(track.streamUrl)
-        player.apply {
-            setMediaItem(mediaItem)
-            prepare()
-            play()
+        serviceScope.launch {
+            try {
+                println("트랙 재생 시도: ${track.streamUrl}")  // 디버그 로그
+                
+                currentTrack = track
+                val mediaItem = MediaItem.fromUri(track.streamUrl)
+                player.apply {
+                    setMediaItem(mediaItem)
+                    prepare()
+                    play()
+                }
+                startForeground(NOTIFICATION_ID, notificationManager.createNotification(track, true))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
-        startForeground(NOTIFICATION_ID, notificationManager.createNotification(track, true))
     }
 
     fun togglePlayPause() {
@@ -123,6 +131,7 @@ class BackgroundAudioService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        serviceScope.cancel() // 코루틴 스코프 취소
         player.release()
         mediaSession.release()
         mediaSessionCompat.release()

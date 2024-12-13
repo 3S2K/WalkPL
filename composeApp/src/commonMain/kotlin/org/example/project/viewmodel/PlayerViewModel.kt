@@ -7,24 +7,25 @@ import org.example.project.domain.model.Track
 import org.example.project.player.AudioPlayer
 import org.example.project.player.PlaylistManager
 import org.example.project.player.MetadataReader
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import org.example.project.util.viewModelScope
 import org.example.project.player.NotificationManager
 import org.example.project.data.remote.ContentApi
 import org.example.project.domain.model.RepeatMode
 import org.example.project.domain.model.Playlist
 import androidx.compose.runtime.mutableStateListOf
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.NonCancellable.isActive
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.Dispatchers
+import org.example.project.di.NetworkModule
 
 class PlayerViewModel(
     private val audioPlayer: AudioPlayer,
     private val playlistManager: PlaylistManager,
     private val metadataReader: MetadataReader,
-    private val contentApi: ContentApi,
+    private val contentApi: ContentApi = NetworkModule.contentApi,
     val testSongUri: String? = null
 ) : ViewModel() {
     private val _currentTrack = mutableStateOf<Track?>(null)
@@ -70,8 +71,8 @@ class PlayerViewModel(
     private val _tracks = MutableStateFlow<List<Track>>(emptyList())
     val tracks = _tracks.asStateFlow()
     
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading = _isLoading.asStateFlow()
+    private val _loadingState = MutableStateFlow<LoadingState>(LoadingState.Initial)
+    val loadingState = _loadingState.asStateFlow()
     
     private val _isError = MutableStateFlow(false)
     val isError = _isError.asStateFlow()
@@ -79,11 +80,24 @@ class PlayerViewModel(
     private val _isServerError = mutableStateOf(false)
     val isServerError: State<Boolean> = _isServerError
 
+    // 백그라운드 작업을 위한 별도의 스코프
+    private val backgroundScope = viewModelScope + Dispatchers.Default
+    
     init {
-        startPositionUpdates()
-        updatePlaylists()
-        loadTracksFromServer()
-        startConnectionCheck()
+        initializeViewModel()
+    }
+
+    private fun initializeViewModel() {
+        backgroundScope.launch {
+            try {
+                startPositionUpdates()
+                updatePlaylists()
+                loadTracksFromServer()
+                startConnectionCheck()
+            } catch (e: Exception) {
+                _loadingState.value = LoadingState.Error(e.message ?: "알 수 없는 오류가 발생했습니다")
+            }
+        }
     }
 
     private fun startPositionUpdates() {
@@ -293,39 +307,42 @@ class PlayerViewModel(
         setPlaylist(tracks)  // 기존의 setPlaylist 메서드 활용
     }
 
-    private fun loadTracksFromServer() {
-        viewModelScope.launch {
-            if (_tracks.value.isEmpty() && !_isError.value) {
-                _isLoading.value = true
-                try {
-                    val result = contentApi.getContents()
-                    _tracks.value = result
-                    _isError.value = result.isEmpty()
-                } catch (e: Exception) {
-                    println("트랙 로딩 실패: ${e.message}")
-                    _isError.value = true
-                    _tracks.value = emptyList()
-                } finally {
-                    _isLoading.value = false
-                }
+    private suspend fun loadTracksFromServer() {
+        try {
+            _loadingState.value = LoadingState.Loading
+            val result = contentApi.getContents()
+            if (result.isEmpty()) {
+                _loadingState.value = LoadingState.Empty
+            } else {
+                _tracks.value = result
+                _loadingState.value = LoadingState.Success
             }
+        } catch (e: Exception) {
+            println("트랙 로딩 실패: ${e.message}")
+            _loadingState.value = LoadingState.Error(e.message ?: "트랙 로딩 실패")
+            _tracks.value = emptyList()
         }
     }
 
-    private fun startConnectionCheck() {
-        viewModelScope.launch {
-            while (isActive) {
-                try {
-                    contentApi.checkConnection()
-                    if (_isError.value) {
-                        loadTracksFromServer()
-                    }
-                } catch (e: Exception) {
-                    _isError.value = true
-                    _tracks.value = emptyList()
+    private suspend fun startConnectionCheck() {
+        while (isActive) {
+            try {
+                contentApi.checkConnection()
+                if (_loadingState.value is LoadingState.Error) {
+                    loadTracksFromServer()
                 }
-                delay(30000)
+            } catch (e: Exception) {
+                _loadingState.value = LoadingState.Error("서버 연결 실패")
             }
+            delay(30.seconds)
         }
     }
+}
+
+sealed class LoadingState {
+    object Initial : LoadingState()
+    object Loading : LoadingState()
+    object Success : LoadingState()
+    object Empty : LoadingState()
+    data class Error(val message: String) : LoadingState()
 }
