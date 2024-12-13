@@ -7,6 +7,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import kotlinx.coroutines.launch
 import org.example.project.ui.components.BottomNavigationBar
 import org.example.project.ui.components.FullScreenPlayer
@@ -59,11 +62,19 @@ fun App(viewModel: PlayerViewModel) {
                 }
             ) { paddingValues ->
                 Box(modifier = Modifier.padding(paddingValues)) {
-                    when (currentRoute) {
-                        "home" -> HomeScreen(viewModel)
-                        "create" -> { /* 만들기 화면 컴포넌트 */ }
-                        "walk" -> { /* 걸음 화면 컴포넌트 */ }
-                        "library" -> LibraryScreen(viewModel)
+                    Crossfade(
+                        targetState = currentRoute,
+                        animationSpec = tween(
+                            durationMillis = 200,
+                            easing = FastOutSlowInEasing
+                        )
+                    ) { route ->
+                        when (route) {
+                            "home" -> HomeScreen(viewModel)
+                            "create" -> { /* 만들기 화면 컴포넌트 */ }
+                            "walk" -> { /* 걸기 화면 컴포넌트 */ }
+                            "library" -> LibraryScreen(viewModel)
+                        }
                     }
                 }
             }
@@ -138,3 +149,11 @@ fun App(viewModel: PlayerViewModel) {
 
 @Composable
 expect fun AndroidSystemBars()
+
+private fun getRouteIndex(route: String): Int = when (route) {
+    "home" -> 0
+    "create" -> 1
+    "walk" -> 2
+    "library" -> 3
+    else -> 0
+}
