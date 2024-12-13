@@ -6,9 +6,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -20,62 +20,81 @@ import androidx.compose.ui.unit.dp
 import org.example.project.domain.model.Track
 import org.example.project.viewmodel.PlayerViewModel
 import androidx.compose.ui.graphics.Color
+import org.example.project.domain.model.ContentType
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(viewModel: PlayerViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
     
-    Column {
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = Color.White,
-            indicator = { tabPositions -> 
-                TabRowDefaults.Indicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = Color.White
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column {
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = Color.White,
+                indicator = { tabPositions -> 
+                    TabRowDefaults.Indicator(
+                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = Color.White
+                    )
+                }
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("홈", color = if (selectedTab == 0) Color.White else Color.White.copy(alpha = 0.6f)) }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Shorts", color = if (selectedTab == 1) Color.White else Color.White.copy(alpha = 0.6f)) }
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text("뉴스", color = if (selectedTab == 2) Color.White else Color.White.copy(alpha = 0.6f)) }
                 )
             }
-        ) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = { Text("홈", color = if (selectedTab == 0) Color.White else Color.White.copy(alpha = 0.6f)) }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = { Text("Shorts", color = if (selectedTab == 1) Color.White else Color.White.copy(alpha = 0.6f)) }
-            )
-            Tab(
-                selected = selectedTab == 2,
-                onClick = { selectedTab = 2 },
-                text = { Text("뉴스", color = if (selectedTab == 2) Color.White else Color.White.copy(alpha = 0.6f)) }
-            )
-        }
 
-        // 탭 컨텐츠
-        when (selectedTab) {
-            0 -> TracksList(viewModel)
-            1 -> ShortsContent()
-            2 -> NewsContent()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    when (selectedTab) {
+                        0 -> TracksList(viewModel)
+                        1 -> ShortsContent(viewModel)
+                        2 -> NewsContent(viewModel)
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun TracksList(viewModel: PlayerViewModel) {
+private fun TracksList(
+    viewModel: PlayerViewModel,
+    contentType: ContentType? = null
+) {
     var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
     
     LaunchedEffect(Unit) {
         try {
-            isLoading = true
-            tracks = viewModel.loadTracks()
+            val allTracks = viewModel.loadTracks()
+            tracks = when (contentType) {
+                ContentType.SHORTS -> allTracks.filter { it.type == ContentType.SHORTS }
+                ContentType.NEWS -> allTracks.filter { it.type == ContentType.NEWS }
+                null -> allTracks
+                else -> allTracks
+            }
         } catch (e: Exception) {
-            error = e.message
+            println("트랙 로딩 실패: ${e.message}")
         } finally {
             isLoading = false
         }
@@ -88,21 +107,14 @@ private fun TracksList(viewModel: PlayerViewModel) {
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
-            error != null -> {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(text = "에러 발생")
-                    Text(
-                        text = error ?: "알 수 없는 에러",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
             tracks.isEmpty() -> {
+                val message = when (contentType) {
+                    ContentType.SHORTS -> "Shorts 컨텐츠가 없습니다"
+                    ContentType.NEWS -> "뉴스 컨텐츠가 없습니다"
+                    else -> "트랙이 없습니다\n'music' 폴더에 MP3 파일을 추가해주세요"
+                }
                 Text(
-                    text = "트랙이 없습니다\n'music' 폴더에 MP3 파일을 추가해주세요",
+                    text = message,
                     modifier = Modifier.align(Alignment.Center),
                     textAlign = TextAlign.Center
                 )
@@ -122,23 +134,13 @@ private fun TracksList(viewModel: PlayerViewModel) {
 }
 
 @Composable
-private fun ShortsContent() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Shorts 컨텐츠가 준비 중입니다")
-    }
+private fun ShortsContent(viewModel: PlayerViewModel) {
+    TracksList(viewModel = viewModel, contentType = ContentType.SHORTS)
 }
 
 @Composable
-private fun NewsContent() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("뉴스 컨텐츠가 준비 중입니다")
-    }
+private fun NewsContent(viewModel: PlayerViewModel) {
+    TracksList(viewModel = viewModel, contentType = ContentType.NEWS)
 }
 
 @Composable
@@ -151,9 +153,7 @@ private fun TrackItem(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clickable(onClick = onTrackClick),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -162,10 +162,20 @@ private fun TrackItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                imageVector = when (track.type) {
+                    ContentType.SHORTS -> Icons.Default.PlayCircle
+                    ContentType.NEWS -> Icons.Default.Article
+                    else -> Icons.Default.MusicNote
+                },
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(end = 16.dp)
+            )
+            
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(end = 16.dp)
             ) {
                 Text(
                     text = track.title,
@@ -173,7 +183,6 @@ private fun TrackItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = track.artist,
                     style = MaterialTheme.typography.bodyMedium,
@@ -184,9 +193,10 @@ private fun TrackItem(
             }
             
             Icon(
-                imageVector = Icons.Default.MusicNote,
-                contentDescription = "Now Playing",
-                tint = MaterialTheme.colorScheme.primary
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "더보기",
+                tint = Color.White,
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
     }
