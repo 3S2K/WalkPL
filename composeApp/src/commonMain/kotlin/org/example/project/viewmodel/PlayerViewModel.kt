@@ -128,9 +128,12 @@ class PlayerViewModel(
                 
                 _currentTrack.value = track
                 audioPlayer.play(track)
-                _isPlaying.value = true
                 checkIsLiked(track)
                 _isServerError.value = false
+                
+                // 재생이 실제로 시작되면 버퍼링 상태 해제
+                _isPlaying.value = true
+                _isBuffering.value = false
             } catch (e: Exception) {
                 println("트랙 재생 실패: ${e.message}")
                 if (e.message?.contains("서버 연결 실패") == true) {
@@ -138,6 +141,7 @@ class PlayerViewModel(
                 }
                 _isError.value = true
                 _tracks.value = emptyList()
+                _isPlaying.value = false
                 _isBuffering.value = false
             }
         }
@@ -161,20 +165,21 @@ class PlayerViewModel(
         viewModelScope.launch {
             try {
                 _isBuffering.value = true
+                val wasPlaying = _isPlaying.value
                 _isPlaying.value = false
                 
                 audioPlayer.seekTo(position)
                 _currentPosition.value = position
                 
-                while (!audioPlayer.isPlaying()) {
-                    delay(50)
+                // 버퍼링이 완료되면 이전 재생 상태로 복원
+                if (wasPlaying) {
+                    audioPlayer.resume()
+                    _isPlaying.value = true
                 }
-                
                 _isBuffering.value = false
-                _isPlaying.value = true
                 
                 currentTrack.value?.let { track ->
-                    notificationManager?.updateNotification(track, true)
+                    notificationManager?.updateNotification(track, _isPlaying.value)
                 }
             } catch (e: Exception) {
                 println("시크 작업 실패: ${e.message}")
@@ -291,10 +296,12 @@ class PlayerViewModel(
         }
     }
 
-    // AudioPlayer의 상태 변경을 감지하는 콜백 추가
+    // AudioPlayer의 상태 변경을 감지하는 콜백 수정
     fun onPlaybackStateChanged(isPlaying: Boolean) {
         _isPlaying.value = isPlaying
-        _isBuffering.value = false
+        if (isPlaying) {
+            _isBuffering.value = false
+        }
         
         currentTrack.value?.let { track ->
             notificationManager?.updateNotification(track, isPlaying)
