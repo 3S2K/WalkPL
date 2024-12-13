@@ -61,6 +61,9 @@ class PlayerViewModel(
 
     private val _likedTracks = mutableStateListOf<Track>()
 
+    private val _isBuffering = mutableStateOf(false)
+    val isBuffering: State<Boolean> = _isBuffering
+
     init {
         startPositionUpdates()
         updatePlaylists()
@@ -76,7 +79,7 @@ class PlayerViewModel(
                 } else {
                     0f
                 }
-                delay(100) // 100ms마다 업데이트
+                delay(100)
             }
         }
     }
@@ -108,8 +111,30 @@ class PlayerViewModel(
     }
 
     fun seekTo(position: Long) {
-        audioPlayer.seekTo(position)
-        _currentPosition.value = position
+        viewModelScope.launch {
+            try {
+                _isBuffering.value = true
+                _isPlaying.value = false
+                
+                audioPlayer.seekTo(position)
+                _currentPosition.value = position
+                
+                while (!audioPlayer.isPlaying()) {
+                    delay(50)
+                }
+                
+                _isBuffering.value = false
+                _isPlaying.value = true
+                
+                currentTrack.value?.let { track ->
+                    notificationManager?.updateNotification(track, true)
+                }
+            } catch (e: Exception) {
+                println("시크 작업 실패: ${e.message}")
+                _isBuffering.value = false
+                _isPlaying.value = audioPlayer.isPlaying()
+            }
+        }
     }
 
     fun skipToNext() {
@@ -225,6 +250,16 @@ class PlayerViewModel(
         if (playlist.tracks.isNotEmpty()) {
             setPlaylist(playlist.tracks)
             playTrack(playlist.tracks.first())
+        }
+    }
+
+    // AudioPlayer의 상태 변경을 감지하는 콜백 추가
+    fun onPlaybackStateChanged(isPlaying: Boolean) {
+        _isPlaying.value = isPlaying
+        _isBuffering.value = false
+        
+        currentTrack.value?.let { track ->
+            notificationManager?.updateNotification(track, isPlaying)
         }
     }
 }

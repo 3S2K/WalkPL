@@ -27,6 +27,7 @@ import kotlin.math.floor
 fun FullScreenPlayerScreen(
     track: Track,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     progress: Float,
     isLiked: Boolean = false,
     onProgressChange: (Float) -> Unit,
@@ -55,6 +56,7 @@ fun FullScreenPlayerScreen(
     FullScreenPlayer(
         track = track,
         isPlaying = isPlaying,
+        isBuffering = isBuffering,
         progress = progress,
         isLiked = isLiked,
         onProgressChange = onProgressChange,
@@ -127,6 +129,7 @@ private fun PlaylistDialogs(
 fun FullScreenPlayer(
     track: Track,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     progress: Float,
     isLiked: Boolean = false,
     onProgressChange: (Float) -> Unit,
@@ -214,6 +217,7 @@ fun FullScreenPlayer(
 
                 PlayerControls(
                     isPlaying = isPlaying,
+                    isBuffering = isBuffering,
                     isShuffled = isShuffled,
                     repeatMode = repeatMode,
                     onPlayPauseClick = onPlayPauseClick,
@@ -350,10 +354,20 @@ private fun PlayerProgress(
     duration: Long,
     onProgressChange: (Float) -> Unit
 ) {
+    var isSliding by remember { mutableStateOf(false) }
+    var localProgress by remember { mutableStateOf(progress) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Slider(
-            value = progress,
-            onValueChange = onProgressChange,
+            value = if (isSliding) localProgress else progress,
+            onValueChange = { newProgress ->
+                isSliding = true
+                localProgress = newProgress
+            },
+            onValueChangeFinished = {
+                isSliding = false
+                onProgressChange(localProgress)
+            },
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
@@ -368,7 +382,7 @@ private fun PlayerProgress(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = formatDuration((progress * duration).toLong()),
+                text = formatDuration((if (isSliding) localProgress else progress * duration).toLong()),
                 color = Color.Gray,
                 style = MaterialTheme.typography.bodySmall
             )
@@ -384,6 +398,7 @@ private fun PlayerProgress(
 @Composable
 private fun PlayerControls(
     isPlaying: Boolean,
+    isBuffering: Boolean,
     isShuffled: Boolean,
     repeatMode: RepeatMode,
     onPlayPauseClick: () -> Unit,
@@ -403,7 +418,7 @@ private fun PlayerControls(
             Icon(
                 imageVector = Icons.Default.Shuffle,
                 contentDescription = "Shuffle",
-                tint = Color.White
+                tint = if (isShuffled) MaterialTheme.colorScheme.primary else Color.White
             )
         }
         
@@ -427,13 +442,22 @@ private fun PlayerControls(
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
-                )
+                ),
+                enabled = !isBuffering
             ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    modifier = Modifier.size(32.dp)
-                )
+                if (isBuffering) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "일시정지" else "재생",
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
             
             IconButton(onClick = onNextClick) {
@@ -453,7 +477,7 @@ private fun PlayerControls(
                     else -> Icons.Default.Repeat
                 },
                 contentDescription = "Repeat",
-                tint = Color.White
+                tint = if (repeatMode != RepeatMode.NONE) MaterialTheme.colorScheme.primary else Color.White
             )
         }
     }

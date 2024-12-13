@@ -91,6 +91,7 @@ fun App(viewModel: PlayerViewModel) {
                                 FullScreenPlayer(
                                     track = track,
                                     isPlaying = viewModel.isPlaying.value,
+                                    isBuffering = viewModel.isBuffering.value,
                                     progress = viewModel.progress.value,
                                     isLiked = viewModel.isLiked.value,
                                     isShuffled = viewModel.isShuffled.value,
