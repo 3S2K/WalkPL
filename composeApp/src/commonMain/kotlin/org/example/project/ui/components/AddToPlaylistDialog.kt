@@ -50,7 +50,7 @@ fun AddToPlaylistDialog(
             title = { Text("재생목록에 추가") },
             text = {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(playlists.filter { PlaylistManager.isSelectablePlaylist(it.id) }) { playlist ->
                         Card(

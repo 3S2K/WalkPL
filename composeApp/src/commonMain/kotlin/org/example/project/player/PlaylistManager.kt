@@ -175,4 +175,14 @@ class PlaylistManager {
     fun getSelectablePlaylists(): List<Playlist> {
         return getPlaylists().filter { isSelectablePlaylist(it.id) }
     }
+
+    // 현재 재생목록 설정 및 재생 시작
+    fun playTracks(tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+        
+        // 현재 재생목록 설정
+        setPlaylist(tracks)
+        // 첫 번째 트랙부터 재생 시작
+        playTrack(tracks.first())
+    }
 }

@@ -1,5 +1,9 @@
 package org.example.project.domain.model
 
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -15,7 +19,8 @@ data class Track(
     val type: ContentType = ContentType.CUSTOM,
     val metadata: ContentMetadata? = null,
     val isDownloaded: Boolean = false,
-    val localPath: String? = null
+    val localPath: String? = null,
+    val date: String? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -34,6 +39,7 @@ data class Track(
         if (isDownloaded != other.isDownloaded) return false
         if (localPath != other.localPath) return false
         if (!albumArt.contentEquals(other.albumArt)) return false
+        if (date != other.date) return false
 
         return true
     }
@@ -50,6 +56,7 @@ data class Track(
         result = 31 * result + type.hashCode()
         result = 31 * result + isDownloaded.hashCode()
         result = 31 * result + (localPath?.hashCode() ?: 0)
+        result = 31 * result + (date?.hashCode() ?: 0)
         return result
     }
 }

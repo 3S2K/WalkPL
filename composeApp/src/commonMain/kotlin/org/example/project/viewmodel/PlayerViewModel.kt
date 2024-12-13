@@ -17,6 +17,8 @@ import org.example.project.data.remote.ContentApi
 import org.example.project.domain.model.RepeatMode
 import org.example.project.domain.model.Playlist
 import androidx.compose.runtime.mutableStateListOf
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class PlayerViewModel(
     private val audioPlayer: AudioPlayer,
@@ -64,9 +66,24 @@ class PlayerViewModel(
     private val _isBuffering = mutableStateOf(false)
     val isBuffering: State<Boolean> = _isBuffering
 
+    // 트랙 로딩 관련 상태 추가
+    private val _tracks = MutableStateFlow<List<Track>>(emptyList())
+    val tracks = _tracks.asStateFlow()
+    
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading = _isLoading.asStateFlow()
+    
+    private val _isError = MutableStateFlow(false)
+    val isError = _isError.asStateFlow()
+
+    private val _isServerError = mutableStateOf(false)
+    val isServerError: State<Boolean> = _isServerError
+
     init {
         startPositionUpdates()
         updatePlaylists()
+        loadTracksFromServer()
+        startConnectionCheck()
     }
 
     private fun startPositionUpdates() {
@@ -90,10 +107,26 @@ class PlayerViewModel(
     }
 
     fun playTrack(track: Track) {
-        _currentTrack.value = track
-        audioPlayer.play(track)
-        _isPlaying.value = true
-        checkIsLiked(track)
+        viewModelScope.launch {
+            try {
+                _isBuffering.value = true
+                contentApi.checkConnection()
+                
+                _currentTrack.value = track
+                audioPlayer.play(track)
+                _isPlaying.value = true
+                checkIsLiked(track)
+                _isServerError.value = false
+            } catch (e: Exception) {
+                println("트랙 재생 실패: ${e.message}")
+                if (e.message?.contains("서버 연결 실패") == true) {
+                    _isServerError.value = true
+                }
+                _isError.value = true
+                _tracks.value = emptyList()
+                _isBuffering.value = false
+            }
+        }
     }
 
     fun togglePlayPause() {
@@ -164,15 +197,6 @@ class PlayerViewModel(
 
     fun setNotificationManager(manager: NotificationManager) {
         notificationManager = manager
-    }
-
-    suspend fun loadTracks(): List<Track> {
-        return try {
-            contentApi.getContents()
-        } catch (e: Exception) {
-            println("트랙 로딩 실패: ${e.message}")
-            emptyList()
-        }
     }
 
     fun toggleShuffle() {
@@ -260,6 +284,48 @@ class PlayerViewModel(
         
         currentTrack.value?.let { track ->
             notificationManager?.updateNotification(track, isPlaying)
+        }
+    }
+
+    fun playTracks(tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+
+        setPlaylist(tracks)  // 기존의 setPlaylist 메서드 활용
+    }
+
+    private fun loadTracksFromServer() {
+        viewModelScope.launch {
+            if (_tracks.value.isEmpty() && !_isError.value) {
+                _isLoading.value = true
+                try {
+                    val result = contentApi.getContents()
+                    _tracks.value = result
+                    _isError.value = result.isEmpty()
+                } catch (e: Exception) {
+                    println("트랙 로딩 실패: ${e.message}")
+                    _isError.value = true
+                    _tracks.value = emptyList()
+                } finally {
+                    _isLoading.value = false
+                }
+            }
+        }
+    }
+
+    private fun startConnectionCheck() {
+        viewModelScope.launch {
+            while (isActive) {
+                try {
+                    contentApi.checkConnection()
+                    if (_isError.value) {
+                        loadTracksFromServer()
+                    }
+                } catch (e: Exception) {
+                    _isError.value = true
+                    _tracks.value = emptyList()
+                }
+                delay(30000)
+            }
         }
     }
 }

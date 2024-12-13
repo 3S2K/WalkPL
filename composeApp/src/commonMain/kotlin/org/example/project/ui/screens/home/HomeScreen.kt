@@ -1,31 +1,59 @@
 package org.example.project.ui.screens.home
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Article
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.example.project.domain.model.Track
 import org.example.project.viewmodel.PlayerViewModel
 import androidx.compose.ui.graphics.Color
 import org.example.project.domain.model.ContentType
+import org.example.project.ui.screens.home.components.TrackGroup
+import androidx.compose.animation.*
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun HomeScreen(viewModel: PlayerViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
+    var isGestureInProgress by remember { mutableStateOf(false) }
+    var showErrorSnackbar by remember { mutableStateOf(false) }
     
+    // StateFlow를 State로 변환
+    val tracks by viewModel.tracks.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val isError by viewModel.isError.collectAsState()
+
+    // 뉴스 트랙과 날짜 미리 필터링
+    val newsTracks = remember(tracks) {
+        tracks.filter { it.type == ContentType.NEWS }
+    }
+    val availableDates = remember(newsTracks) {
+        newsTracks.mapNotNull { it.date }.distinct().sortedDescending()
+    }
+    var selectedNewsDate by remember(availableDates) {
+        mutableStateOf(availableDates.firstOrNull() ?: "")
+    }
+
+    fun updateSelectedTab(newTab: Int) {
+        if (!isGestureInProgress && newTab in 0..2) {
+            isGestureInProgress = true
+            selectedTab = newTab
+        }
+    }
+    
+    val onTrackClick: (Track) -> Unit = { track ->
+        if (isError) {
+            showErrorSnackbar = true
+        } else {
+            viewModel.playTrack(track)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column {
             TabRow(
@@ -35,169 +63,198 @@ fun HomeScreen(viewModel: PlayerViewModel) {
                 indicator = { tabPositions -> 
                     TabRowDefaults.Indicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = Color.White
+                        color = Color.White,
+                        height = 2.dp
                     )
                 }
             ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("홈", color = if (selectedTab == 0) Color.White else Color.White.copy(alpha = 0.6f)) }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("Shorts", color = if (selectedTab == 1) Color.White else Color.White.copy(alpha = 0.6f)) }
-                )
-                Tab(
-                    selected = selectedTab == 2,
-                    onClick = { selectedTab = 2 },
-                    text = { Text("뉴스", color = if (selectedTab == 2) Color.White else Color.White.copy(alpha = 0.6f)) }
-                )
+                listOf("홈", "Shorts", "뉴스").forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = { 
+                            Text(
+                                text = title,
+                                color = if (selectedTab == index) 
+                                    Color.White 
+                                else 
+                                    Color.White.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = if (selectedTab == index) 
+                                        androidx.compose.ui.text.font.FontWeight.Bold
+                                    else 
+                                        androidx.compose.ui.text.font.FontWeight.Normal
+                                )
+                            )
+                        }
+                    )
+                }
             }
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 12.dp)
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = { isGestureInProgress = false },
+                            onDragCancel = { isGestureInProgress = false }
+                        ) { _, dragAmount ->
+                            when {
+                                dragAmount > 50 && selectedTab > 0 -> updateSelectedTab(selectedTab - 1)
+                                dragAmount < -50 && selectedTab < 2 -> updateSelectedTab(selectedTab + 1)
+                            }
+                        }
+                    }
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    when (selectedTab) {
-                        0 -> TracksList(viewModel)
-                        1 -> ShortsContent(viewModel)
-                        2 -> NewsContent(viewModel)
+                AnimatedContent(
+                    targetState = selectedTab,
+                    transitionSpec = {
+                        val direction = if (targetState > initialState) {
+                            AnimatedContentTransitionScope.SlideDirection.Left
+                        } else {
+                            AnimatedContentTransitionScope.SlideDirection.Right
+                        }
+                        slideIntoContainer(towards = direction) togetherWith 
+                        slideOutOfContainer(towards = direction)
+                    }
+                ) { targetTab ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 12.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        when (targetTab) {
+                            0 -> HomeContent(
+                                tracks = tracks,
+                                viewModel = viewModel,
+                                isLoading = isLoading,
+                                isError = isError,
+                                onTrackClick = onTrackClick
+                            )
+                            1 -> ShortsContent(
+                                tracks = tracks,
+                                viewModel = viewModel,
+                                isLoading = isLoading,
+                                isError = isError,
+                                onTrackClick = onTrackClick
+                            )
+                            2 -> NewsContent(
+                                tracks = newsTracks,
+                                availableDates = availableDates,
+                                selectedDate = selectedNewsDate,
+                                onDateSelected = { selectedNewsDate = it },
+                                viewModel = viewModel,
+                                isLoading = isLoading,
+                                isError = isError,
+                                onTrackClick = onTrackClick
+                            )
+                        }
                     }
                 }
-            }
-        }
-    }
-}
 
-@Composable
-private fun TracksList(
-    viewModel: PlayerViewModel,
-    contentType: ContentType? = null
-) {
-    var tracks by remember { mutableStateOf<List<Track>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    
-    LaunchedEffect(Unit) {
-        try {
-            val allTracks = viewModel.loadTracks()
-            tracks = when (contentType) {
-                ContentType.SHORTS -> allTracks.filter { it.type == ContentType.SHORTS }
-                ContentType.NEWS -> allTracks.filter { it.type == ContentType.NEWS }
-                null -> allTracks
-                else -> allTracks
-            }
-        } catch (e: Exception) {
-            println("트랙 로딩 실패: ${e.message}")
-        } finally {
-            isLoading = false
-        }
-    }
-    
-    Box(modifier = Modifier.fillMaxSize()) {
-        when {
-            isLoading -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-            tracks.isEmpty() -> {
-                val message = when (contentType) {
-                    ContentType.SHORTS -> "Shorts 컨텐츠가 없습니다"
-                    ContentType.NEWS -> "뉴스 컨텐츠가 없습니다"
-                    else -> "트랙이 없습니다\n'music' 폴더에 MP3 파일을 추가해주세요"
-                }
-                Text(
-                    text = message,
-                    modifier = Modifier.align(Alignment.Center),
-                    textAlign = TextAlign.Center
-                )
-            }
-            else -> {
-                LazyColumn {
-                    items(tracks) { track ->
-                        TrackItem(
-                            track = track,
-                            onTrackClick = { viewModel.playTrack(track) }
-                        )
-                    }
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun ShortsContent(viewModel: PlayerViewModel) {
-    TracksList(viewModel = viewModel, contentType = ContentType.SHORTS)
-}
-
-@Composable
-private fun NewsContent(viewModel: PlayerViewModel) {
-    TracksList(viewModel = viewModel, contentType = ContentType.NEWS)
-}
-
-@Composable
-private fun TrackItem(
-    track: Track,
-    onTrackClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable(onClick = onTrackClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = when (track.type) {
-                    ContentType.SHORTS -> Icons.Default.PlayCircle
-                    ContentType.NEWS -> Icons.Default.Article
-                    else -> Icons.Default.MusicNote
-                },
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = 16.dp)
-            )
-            
-            Column(
+        // SnackBar
+        if (showErrorSnackbar) {
+            Snackbar(
                 modifier = Modifier
-                    .weight(1f)
+                    .padding(16.dp)
+                    .align(Alignment.BottomCenter),
+                action = {
+                    TextButton(onClick = { showErrorSnackbar = false }) {
+                        Text("확인")
+                    }
+                },
+                dismissAction = { showErrorSnackbar = false }
             ) {
-                Text(
-                    text = track.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = track.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Text("서버에 연결할 수 없습니다\n네트워크 연결을 확인해주세요")
             }
-            
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "더보기",
-                tint = Color.White,
-                modifier = Modifier.padding(start = 8.dp)
-            )
         }
+    }
+}
+
+@Composable
+private fun HomeContent(
+    tracks: List<Track>,
+    viewModel: PlayerViewModel,
+    isLoading: Boolean,
+    isError: Boolean,
+    onTrackClick: (Track) -> Unit
+) {
+    var selectedCategory by remember { mutableStateOf("모든 음악") }
+    
+    if (!isLoading) {
+        TrackGroup(
+            tracks = tracks,
+            viewModel = viewModel,
+            showCategoryButtons = true,
+            categories = listOf("모든 음악", "최근 추가됨"),
+            selectedCategory = selectedCategory,
+            onCategorySelected = { selectedCategory = it },
+            showPlayAll = true,
+            emptyMessage = if (isError) "서버에 연결할 수 없습니다\n네트워크 연결을 확인해주세요" else "트랙이 없습니다",
+            onTrackClick = onTrackClick,
+            isError = isError
+        )
+    }
+}
+
+@Composable
+private fun ShortsContent(
+    tracks: List<Track>,
+    viewModel: PlayerViewModel,
+    isLoading: Boolean,
+    isError: Boolean,
+    onTrackClick: (Track) -> Unit
+) {
+    var selectedCategory by remember { mutableStateOf("인기") }
+    
+    if (!isLoading) {
+        TrackGroup(
+            tracks = tracks.filter { it.type == ContentType.SHORTS },
+            viewModel = viewModel,
+            showCategoryButtons = true,
+            categories = listOf("인기", "최근 추가됨"),
+            selectedCategory = selectedCategory,
+            onCategorySelected = { selectedCategory = it },
+            showPlayAll = true,
+            emptyMessage = if (isError) "서버에 연결할 수 없습니다\n네트워크 연결을 확인해주세요" else "Shorts 컨텐츠가 없습니다",
+            onTrackClick = onTrackClick,
+            isError = isError
+        )
+    }
+}
+
+@Composable
+private fun NewsContent(
+    tracks: List<Track>,
+    availableDates: List<String>,
+    selectedDate: String,
+    onDateSelected: (String) -> Unit,
+    viewModel: PlayerViewModel,
+    isLoading: Boolean,
+    isError: Boolean,
+    onTrackClick: (Track) -> Unit
+) {
+    if (!isLoading) {
+        TrackGroup(
+            tracks = tracks,
+            viewModel = viewModel,
+            showPlayAll = true,
+            showDateFilter = true,
+            availableDates = availableDates,
+            selectedDate = selectedDate,
+            onDateSelected = onDateSelected,
+            emptyMessage = if (isError) "서버에 연결할 수 없습니다\n네트워크 연결을 확인해주세요" else "선택한 날짜의 뉴스가 없습니다",
+            onTrackClick = onTrackClick,
+            isError = isError
+        )
     }
 }

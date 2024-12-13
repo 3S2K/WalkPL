@@ -85,8 +85,8 @@ fun LibraryScreen(
                 }
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(0.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    contentPadding = PaddingValues(4.dp)
                 ) {
                     items(playlists) { playlist ->
                         PlaylistListItem(
