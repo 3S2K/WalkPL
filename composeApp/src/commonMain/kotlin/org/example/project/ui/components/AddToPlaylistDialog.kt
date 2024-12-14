@@ -53,48 +53,15 @@ fun AddToPlaylistDialog(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(playlists.filter { PlaylistManager.isSelectablePlaylist(it.id) }) { playlist ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelectPlaylist(playlist.id)
-                                    if (playlist.id == PlaylistManager.LIKES_PLAYLIST_ID) {
-                                        onLikeClick()
-                                    }
-                                    onDismiss()
-                                },
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = PlaylistManager.getPlaylistIcon(playlist.id),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(end = 16.dp)
-                                )
-                                Column(
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        text = playlist.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = "트랙 ${playlist.tracks.size}개",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                        playlist.toListItem(
+                            onClick = {
+                                onSelectPlaylist(playlist.id)
+                                if (playlist.id == PlaylistManager.LIKES_PLAYLIST_ID) {
+                                    onLikeClick()
                                 }
+                                onDismiss()
                             }
-                        }
+                        )
                     }
                     item {
                         Card(

@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.example.project.domain.model.Track
 import org.example.project.viewmodel.PlayerViewModel
+import org.example.project.ui.components.toListItem
 
 @Composable
 fun TrackGroup(
@@ -126,12 +127,12 @@ fun TrackGroup(
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(tracks) { track ->
-                    TrackItem(
-                        track = track,
-                        onTrackClick = { onTrackClick(track) }
+                    track.toListItem(
+                        onClick = { onTrackClick(track) },
+                        onMoreClick = { /* 더보기 메뉴 처리 */ }
                     )
                 }
             }

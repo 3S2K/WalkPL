@@ -14,8 +14,8 @@ import org.example.project.domain.model.ContentType
 import org.example.project.ui.screens.home.components.TrackGroup
 import androidx.compose.animation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.style.TextAlign
 import org.example.project.viewmodel.LoadingState
 
 @Composable
@@ -64,11 +64,11 @@ fun HomeScreen(viewModel: PlayerViewModel) {
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = Color.White,
-                indicator = { tabPositions -> 
-                    TabRowDefaults.Indicator(
+                indicator = { tabPositions ->
+                    SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = Color.White,
-                        height = 2.dp
+                        height = 2.dp,
+                        color = Color.White
                     )
                 }
             ) {

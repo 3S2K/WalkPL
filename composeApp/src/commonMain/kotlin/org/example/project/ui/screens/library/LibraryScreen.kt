@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +22,8 @@ import org.example.project.domain.model.Playlist
 import org.example.project.player.PlaylistManager
 import org.example.project.ui.components.AddToPlaylistDialog
 import org.example.project.ui.components.NewPlaylistDialog
+import org.example.project.ui.components.ListItem
+import org.example.project.ui.components.toListItem
 import org.example.project.viewmodel.PlayerViewModel
 
 @Composable
@@ -46,7 +50,7 @@ fun LibraryScreen(
                     onClick = { /* TODO: 정렬 메뉴 표시 */ }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Sort,
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
                         contentDescription = "정렬",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -55,7 +59,7 @@ fun LibraryScreen(
                     onClick = { isGridView = !isGridView }
                 ) {
                     Icon(
-                        imageVector = if (isGridView) Icons.Default.List else Icons.Default.GridView,
+                        imageVector = if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
                         contentDescription = if (isGridView) "리스트 보기" else "그리드 보기",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -75,9 +79,9 @@ fun LibraryScreen(
                                 .fillMaxWidth()
                                 .aspectRatio(1f)
                         ) {
-                            PlaylistListItem(
-                                playlist = playlist,
-                                onPlaylistClick = { viewModel.playPlaylist(playlist) },
+                            playlist.toListItem(
+                                onClick = { viewModel.playPlaylist(playlist) },
+                                onMoreClick = { /* 더보기 메뉴 처리 */ },
                                 isGridView = true
                             )
                         }
@@ -85,14 +89,13 @@ fun LibraryScreen(
                 }
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(4.dp)
                 ) {
                     items(playlists) { playlist ->
-                        PlaylistListItem(
-                            playlist = playlist,
-                            onPlaylistClick = { viewModel.playPlaylist(playlist) },
-                            isGridView = false
+                        playlist.toListItem(
+                            onClick = { viewModel.playPlaylist(playlist) },
+                            onMoreClick = { /* 더보기 메뉴 처리 */ }
                         )
                     }
                 }
@@ -116,90 +119,6 @@ fun LibraryScreen(
                 viewModel.createPlaylist(name)
             }
         )
-    }
-}
-
-@Composable
-private fun PlaylistListItem(
-    playlist: Playlist,
-    onPlaylistClick: () -> Unit,
-    isGridView: Boolean = false
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable(onClick = onPlaylistClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        if (isGridView) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 40.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = PlaylistManager.getPlaylistIcon(playlist.id),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(72.dp)
-                    )
-                }
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                ) {
-                    Text(
-                        text = playlist.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = formatTrackCount(playlist.tracks.size),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        } else {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = PlaylistManager.getPlaylistIcon(playlist.id),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(end = 16.dp)
-                )
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                ) {
-                    Text(
-                        text = playlist.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = formatTrackCount(playlist.tracks.size),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
     }
 }
 

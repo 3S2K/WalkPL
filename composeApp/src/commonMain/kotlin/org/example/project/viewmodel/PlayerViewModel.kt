@@ -16,7 +16,6 @@ import androidx.compose.runtime.mutableStateListOf
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.NonCancellable.isActive
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
 import org.example.project.di.NetworkModule
@@ -332,7 +331,7 @@ class PlayerViewModel(
     }
 
     private suspend fun startConnectionCheck() {
-        while (isActive) {
+        while (currentCoroutineContext().isActive) {
             try {
                 contentApi.checkConnection()
                 if (_loadingState.value is LoadingState.Error) {
