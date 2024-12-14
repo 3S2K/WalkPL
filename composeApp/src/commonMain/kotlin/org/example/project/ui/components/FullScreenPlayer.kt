@@ -264,13 +264,17 @@ private fun TopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
-            onClick = onBackClick
+        FilledIconButton(
+            onClick = onBackClick,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = Color.White
+            ),
+            modifier = Modifier.size(48.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = "Close",
-                tint = Color.White
+                contentDescription = "닫기"
             )
         }
         
@@ -280,13 +284,17 @@ private fun TopBar(
             style = MaterialTheme.typography.titleMedium
         )
         
-        IconButton(
-            onClick = onMoreClick
+        FilledIconButton(
+            onClick = onMoreClick,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = Color.White
+            ),
+            modifier = Modifier.size(48.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = "More options",
-                tint = Color.White
+                contentDescription = "더보기"
             )
         }
     }
@@ -408,17 +416,21 @@ private fun PlayerControls(
     onRepeatClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = onShuffleClick) {
+        FilledIconButton(
+            onClick = onShuffleClick,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = if (isShuffled) MaterialTheme.colorScheme.primary else Color.White
+            ),
+            modifier = Modifier.size(48.dp)
+        ) {
             Icon(
                 imageVector = Icons.Default.Shuffle,
-                contentDescription = "Shuffle",
-                tint = if (isShuffled) MaterialTheme.colorScheme.primary else Color.White
+                contentDescription = "Shuffle"
             )
         }
         
@@ -426,12 +438,18 @@ private fun PlayerControls(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onPreviousClick) {
+            FilledIconButton(
+                onClick = onPreviousClick,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier.size(56.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.SkipPrevious,
                     contentDescription = "Previous",
-                    tint = Color.White,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
             
@@ -460,24 +478,36 @@ private fun PlayerControls(
                 }
             }
             
-            IconButton(onClick = onNextClick) {
+            FilledIconButton(
+                onClick = onNextClick,
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White
+                ),
+                modifier = Modifier.size(56.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     contentDescription = "Next",
-                    tint = Color.White,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
         }
         
-        IconButton(onClick = onRepeatClick) {
+        FilledIconButton(
+            onClick = onRepeatClick,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = if (repeatMode != RepeatMode.NONE) MaterialTheme.colorScheme.primary else Color.White
+            ),
+            modifier = Modifier.size(48.dp)
+        ) {
             Icon(
                 imageVector = when (repeatMode) {
                     RepeatMode.ONE -> Icons.Default.RepeatOne
                     else -> Icons.Default.Repeat
                 },
-                contentDescription = "Repeat",
-                tint = if (repeatMode != RepeatMode.NONE) MaterialTheme.colorScheme.primary else Color.White
+                contentDescription = "Repeat"
             )
         }
     }
@@ -490,23 +520,34 @@ private fun BottomMenu(
 ) {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceAround
     ) {
-        Text(
-            text = "트랙",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White,
-            modifier = Modifier.clickable(onClick = onTrackClick)
-        )
+        FilledIconButton(
+            onClick = onTrackClick,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = Color.White
+            )
+        ) {
+            Text(
+                text = "트랙",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
         
-        Text(
-            text = "가사",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White,
-            modifier = Modifier.clickable(onClick = onLyricsClick)
-        )
+        FilledIconButton(
+            onClick = onLyricsClick,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = Color.White
+            )
+        ) {
+            Text(
+                text = "가사",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
     }
 }
 
@@ -522,32 +563,48 @@ private fun ActionButtons(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
+        FilledIconButton(
             onClick = {
                 println("재생목록에 추가 버튼 클릭됨")
                 onAddToPlaylistClick()
-            }
+            },
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = Color.White
+            ),
+            modifier = Modifier.size(48.dp)
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
-                contentDescription = "재생목록에 추가",
-                tint = Color.White
+                contentDescription = "재생목록에 추가"
             )
         }
         
-        IconButton(onClick = onLikeClick) {
+        FilledIconButton(
+            onClick = onLikeClick,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = if (isLiked) MaterialTheme.colorScheme.primary else Color.White
+            ),
+            modifier = Modifier.size(48.dp)
+        ) {
             Icon(
                 imageVector = if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                contentDescription = if (isLiked) "Remove from favorites" else "Add to favorites",
-                tint = Color.White
+                contentDescription = if (isLiked) "좋아요 취소" else "좋아요"
             )
         }
         
-        IconButton(onClick = onShareClick) {
+        FilledIconButton(
+            onClick = onShareClick,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = Color.Transparent,
+                contentColor = Color.White
+            ),
+            modifier = Modifier.size(48.dp)
+        ) {
             Icon(
                 imageVector = Icons.Default.Share,
-                contentDescription = "Share",
-                tint = Color.White
+                contentDescription = "공유하기"
             )
         }
     }
