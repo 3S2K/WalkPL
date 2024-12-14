@@ -1,5 +1,8 @@
 package org.example.project.ui.screens.home.components
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -110,30 +113,38 @@ fun TrackGroup(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        if (tracks.isEmpty() || isError) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = emptyMessage,
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    color = Color.White.copy(alpha = 0.6f)
-                )
-            }
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(tracks) { track ->
-                    track.toListItem(
-                        onClick = { onTrackClick(track) },
-                        onMoreClick = { /* 더보기 메뉴 처리 */ }
+        Crossfade(
+            targetState = Triple(tracks.isEmpty() || isError, selectedCategory, selectedDate),
+            animationSpec = tween(
+                durationMillis = 200,
+                easing = FastOutSlowInEasing
+            )
+        ) { (isEmpty, category, date) ->
+            if (isEmpty) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = emptyMessage,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        color = Color.White.copy(alpha = 0.6f)
                     )
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(tracks) { track ->
+                        track.toListItem(
+                            onClick = { onTrackClick(track) },
+                            onMoreClick = { /* 더보기 메뉴 처리 */ }
+                        )
+                    }
                 }
             }
         }

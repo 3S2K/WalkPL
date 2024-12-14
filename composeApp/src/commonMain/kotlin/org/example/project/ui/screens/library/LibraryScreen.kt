@@ -25,6 +25,9 @@ import org.example.project.ui.components.NewPlaylistDialog
 import org.example.project.ui.components.ListItem
 import org.example.project.ui.components.toListItem
 import org.example.project.viewmodel.PlayerViewModel
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 
 @Composable
 fun LibraryScreen(
@@ -67,36 +70,44 @@ fun LibraryScreen(
             }
             Spacer(modifier = Modifier.height(12.dp))
             
-            if (isGridView) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(playlists) { playlist ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                        ) {
-                            playlist.toListItem(
-                                onClick = { viewModel.playPlaylist(playlist) },
-                                onMoreClick = { /* 더보기 메뉴 처리 */ },
-                                isGridView = true
-                            )
+            Crossfade(
+                targetState = isGridView,
+                animationSpec = tween(
+                    durationMillis = 200,
+                    easing = FastOutSlowInEasing
+                )
+            ) { isGrid ->
+                if (isGrid) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(playlists) { playlist ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                            ) {
+                                playlist.toListItem(
+                                    onClick = { viewModel.playPlaylist(playlist) },
+                                    onMoreClick = { /* 더보기 메뉴 처리 */ },
+                                    isGridView = true
+                                )
+                            }
                         }
                     }
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(4.dp)
-                ) {
-                    items(playlists) { playlist ->
-                        playlist.toListItem(
-                            onClick = { viewModel.playPlaylist(playlist) },
-                            onMoreClick = { /* 더보기 메뉴 처리 */ }
-                        )
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(4.dp)
+                    ) {
+                        items(playlists) { playlist ->
+                            playlist.toListItem(
+                                onClick = { viewModel.playPlaylist(playlist) },
+                                onMoreClick = { /* 더보기 메뉴 처리 */ }
+                            )
+                        }
                     }
                 }
             }
