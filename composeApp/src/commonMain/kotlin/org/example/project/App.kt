@@ -15,6 +15,7 @@ import org.example.project.ui.components.BottomNavigationBar
 import org.example.project.ui.components.FullScreenPlayer
 import org.example.project.ui.components.MiniPlayer
 import org.example.project.ui.components.TopBar
+import org.example.project.ui.screens.create.CreateScreen
 import org.example.project.ui.screens.home.HomeScreen
 import org.example.project.ui.screens.library.LibraryScreen
 import org.example.project.ui.theme.AppTheme
@@ -71,8 +72,8 @@ fun App(viewModel: PlayerViewModel) {
                     ) { route ->
                         when (route) {
                             "home" -> HomeScreen(viewModel)
-                            "create" -> { /* 만들기 화면 컴포넌트 */ }
-                            "walk" -> { /* 걸기 화면 컴포넌트 */ }
+                            "create" -> CreateScreen(viewModel)
+                            "walk" -> { /* 탄보기 화면 컴포넌트 */ }
                             "library" -> LibraryScreen(viewModel)
                         }
                     }
