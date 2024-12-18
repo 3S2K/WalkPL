@@ -104,6 +104,9 @@ kotlin {
             // Ktor
             implementation(libs.ktor.client.android)
             implementation(libs.ktor.client.logging)
+            
+            // Splash Screen
+            implementation(libs.androidx.core.splashscreen)
         }
 
         desktopMain.dependencies {
