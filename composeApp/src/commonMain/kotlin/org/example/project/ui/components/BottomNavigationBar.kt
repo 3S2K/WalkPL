@@ -31,12 +31,12 @@ fun BottomNavigationBar(
             icon = Icons.Default.Home
         ),
         NavigationItem(
-            title = "만들기",
+            title = "노래 생성",
             route = "create",
             icon = Icons.Default.Add
         ),
         NavigationItem(
-            title = "걸음",
+            title = "탄보기",
             route = "walk",
             icon = Icons.AutoMirrored.Filled.DirectionsWalk
         ),
