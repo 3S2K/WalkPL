@@ -2,6 +2,7 @@ package org.example.project.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -15,6 +16,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.ExperimentalResourceApi
@@ -65,7 +67,9 @@ fun TopBar(currentRoute: String = "home") {
                         Image(
                             painter = painterResource(Res.drawable.app_logo),
                             contentDescription = "App Logo",
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(8.dp))
                         )
                     }
                     Spacer(modifier = Modifier.width(8.dp))

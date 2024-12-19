@@ -63,7 +63,7 @@ data class Track(
 
 @Serializable
 enum class ContentType {
-    NEWS, SHORTS, CUSTOM
+    NEWS, CLIP, CUSTOM
 }
 
 @Serializable

@@ -72,7 +72,7 @@ fun HomeScreen(viewModel: PlayerViewModel) {
                     )
                 }
             ) {
-                listOf("홈", "Shorts", "뉴스").forEachIndexed { index, title ->
+                listOf("홈", "클립", "뉴스").forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
@@ -136,7 +136,7 @@ fun HomeScreen(viewModel: PlayerViewModel) {
                                 isError = isError,
                                 onTrackClick = onTrackClick
                             )
-                            1 -> ShortsContent(
+                            1 -> ClipContent(
                                 tracks = tracks,
                                 viewModel = viewModel,
                                 isLoading = isLoading,
@@ -211,7 +211,7 @@ private fun HomeContent(
 }
 
 @Composable
-private fun ShortsContent(
+private fun ClipContent(
     tracks: List<Track>,
     viewModel: PlayerViewModel,
     isLoading: Boolean,
@@ -222,14 +222,14 @@ private fun ShortsContent(
     
     if (!isLoading) {
         TrackGroup(
-            tracks = tracks.filter { it.type == ContentType.SHORTS },
+            tracks = tracks.filter { it.type == ContentType.CLIP },
             viewModel = viewModel,
             showCategoryButtons = true,
             categories = listOf("인기", "최근 추가됨"),
             selectedCategory = selectedCategory,
             onCategorySelected = { selectedCategory = it },
             showPlayAll = true,
-            emptyMessage = if (isError) "서버에 연결할 수 없습니다\n네트워크 연결을 확인해주세요" else "Shorts 컨텐츠가 없습니다",
+            emptyMessage = if (isError) "서버에 연결할 수 없습니다\n네트워크 연결을 확인해주세요" else "클립 컨텐츠가 없습니다",
             onTrackClick = onTrackClick,
             isError = isError
         )

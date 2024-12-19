@@ -146,7 +146,7 @@ fun Track.toListItem(
     modifier: Modifier = Modifier
 ) {
     val icon = when (type) {
-        ContentType.SHORTS -> Icons.Default.PlayCircle
+        ContentType.CLIP -> Icons.Default.PlayCircle
         ContentType.NEWS -> Icons.AutoMirrored.Filled.Article
         else -> Icons.Default.MusicNote
     }
