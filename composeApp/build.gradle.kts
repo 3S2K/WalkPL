@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    kotlin("plugin.serialization") version "1.9.0"
 }
 
 kotlin {
@@ -55,22 +56,62 @@ kotlin {
     sourceSets {
         val desktopMain by getting
         
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-        }
         commonMain.dependencies {
+            // Compose
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material)
+            implementation(compose.material3)
+            implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            
+            // Lifecycle
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            
+            // Coroutines
+            implementation(libs.kotlinx.coroutines.core)
+            
+            // Ktor
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.json)
+            
+            // Serialization
+            implementation(libs.kotlinx.serialization.json)
+            
+            // DateTime
+            implementation(libs.kotlinx.datetime)
         }
+
+        androidMain.dependencies {
+            // Compose
+            implementation(compose.preview)
+            implementation(libs.androidx.activity.compose)
+            
+            // Media
+            implementation(libs.androidx.media3.exoplayer)
+            implementation(libs.androidx.media3.session)
+            implementation(libs.androidx.media3.common)
+            implementation(libs.androidx.media3.ui)
+            implementation(libs.androidx.media)
+            
+            // UI Controllers
+            implementation(libs.accompanist.systemuicontroller)
+            
+            // Ktor
+            implementation(libs.ktor.client.android)
+            implementation(libs.ktor.client.logging)
+            
+            // Splash Screen
+            implementation(libs.androidx.core.splashscreen)
+        }
+
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+            implementation(compose.desktop.common)
             implementation(libs.kotlinx.coroutines.swing)
         }
     }
@@ -78,12 +119,12 @@ kotlin {
 
 android {
     namespace = "org.example.project"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "org.example.project"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
+        minSdk = 24
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
     }
@@ -104,6 +145,10 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.material3.android)
+    implementation(libs.androidx.ui.android)
+    implementation(libs.androidx.foundation.layout.android)
     debugImplementation(compose.uiTooling)
 }
 
